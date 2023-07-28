@@ -8,10 +8,15 @@ import base64
 
 # AI图片推理端接口地址接口地址
 AI_IP='192.168.19.240'
-# AI图片识别任务ID
-AI_TASK_ID='e9e35528-71c7-4b62-9b88-8970bee55ab6'
+# AI图片识别任务ID  就模型ID
+# AI_TASK_ID='e9e35528-71c7-4b62-9b88-8970bee55ab6'
+
+# 新模型任务ID：8f97a571-22e5-41e3-afed-8f525d8338af
+AI_TASK_ID='8f97a571-22e5-41e3-afed-8f525d8338af'
+
 # AI图片推理端接口地址
-AI_API_URL=f'http://{AI_IP}:9090/api/inflet/v1/tasks/{AI_TASK_ID}/predict'
+def getAI_API_URL():
+    return f'http://{AI_IP}:9090/api/inflet/v1/tasks/{AI_TASK_ID}/predict'
 
 headers={"Content-Type": "application/json"}
 
@@ -22,6 +27,31 @@ file_count = 0
 # 标注成功计数器
 success_count = 0
 
+# 是否打印消息
+SHOW_LOG_MSG = True
+
+# 禁用日志打印
+def disableLogMsgOut():
+    global SHOW_LOG_MSG
+    SHOW_LOG_MSG = False
+    
+# 重置任务ID
+def setAiTaskId(ai_task_id):
+    global AI_TASK_ID
+    AI_TASK_ID = ai_task_id
+
+#  重设AI图片推理端接口地址
+def setAiIp(ai_ip):
+    global AI_IP
+    AI_IP = ai_ip
+
+# 清空输出目录
+def emptyOutDir(out_dir): 
+    if os.path.exists(out_dir):
+        os.remove(out_dir)
+        os.makedirs(out_dir)
+    else:
+        os.makedirs(out_dir)
 
 # AI图片推理端
 # image_dir: 图片目录
@@ -37,11 +67,14 @@ def ai_predict(image_dir,out_dir,skip):
         file_count = int(0)
         success_count = int(0)
 
+        api_url = getAI_API_URL()
+   
         for root, dirs, files in os.walk(image_dir):
             if files:
                 # 记录文件列表总数
                 file_max_count = files.__len__()
 
+                logMsg(f'任务ID：{AI_IP}  目标模型检测推理任务  start...','false')
                 for filename in files:
                     # 获取文件名称
                     if filename.lower().endswith('.jpg') or filename.lower().endswith('.jpeg') or filename.lower().endswith('.png'):
@@ -50,7 +83,7 @@ def ai_predict(image_dir,out_dir,skip):
                         if skip == 'true':
                             xml_filename = imgae_name_to_xml_name(filename)
                             if os.path.exists(out_dir + os.path.sep + xml_filename):
-                                printMsg(f'跳过已存在的xml文件：{xml_filename}')
+                                logMsg(f'跳过已存在的xml文件：{xml_filename}')
                                 continue
 
 
@@ -68,17 +101,17 @@ def ai_predict(image_dir,out_dir,skip):
                             })
 
                             # 发送请求
-                            response = requests.post(AI_API_URL,params,headers)
+                            response = requests.post(api_url,params,headers)
 
                             # 检查响应状态码
                             if response.status_code == 200:
-                                printMsg('请求成功','false')
+                                logMsg('请求成功','false')
                                 result_data = response.json()
                                 labels = result_data.get('data').get('targets')
                                 
                                 all_box_xml = ''
                                 if labels == None:
-                                    printMsg('暂无标签数据','true')
+                                    logMsg('暂无标签数据','true')
                                     continue
                                 # 封装xml文件画框内容坐标
                                 for index,label in enumerate(labels):
@@ -97,26 +130,32 @@ def ai_predict(image_dir,out_dir,skip):
                                         xml=bbox_to_temple(bbox_data)
                                         all_box_xml = all_box_xml + xml
                                     else:
-                                        printMsg('暂无标签数据','false')
+                                        logMsg('暂无标签数据','false')
 
                                 complete_xml = head_xml + all_box_xml + head_xml_end_format() 
                                 # 生成xml文件
                                 create_xml_file(out_dir,filename,complete_xml)
                                      
                             else:
-                                printMsg(f'请求失败，状态码：{response.status_code}','false')
-                                printMsg(f'请求失败，状态码：{response.text}','false')
+                                logMsg(f'请求失败，状态码：{response.status_code}','false')
+                                logMsg(f'请求失败，状态码：{response.text}','false')
+                logMsg(f'任务ID：{AI_IP}  目标模型检测推理任务  end...','false')                
     except requests.exceptions.RequestException as e:
-        printMsg(f'请求发生异常：{str(e)}')
+        logMsg(f'请求发生异常：{str(e)}')
+        logMsg(f'任务ID：{AI_IP}  目标模型检测推理任务  end...','false')     
 
 # 打印消息
-def printMsg(text,isOperate='true'):
+def logMsg(text,isOperate='true'):
     global file_count
     global file_max_count
     global success_count
+    global SHOW_LOG_MSG
+
     if isOperate != 'false':
         file_count = int(file_count) + 1
-    print(f'已标注成功{success_count}/{file_max_count}(标注数/总数)  当前进度:{file_count}/{file_max_count}: {text}')
+
+    if SHOW_LOG_MSG:    
+        print(f'已标注成功{success_count}/{file_max_count}(标注数/总数)  当前进度:{file_count}/{file_max_count}: {text}')
 
 # 生成xml文件
 def create_xml_file(xml_file_path,image_name,xml_content):
@@ -133,7 +172,7 @@ def create_xml_file(xml_file_path,image_name,xml_content):
     with open(xml_file_path, 'w', encoding='utf-8') as xml_file:
         xml_file.write(xml_content)
         success_count = int(success_count) + 1
-        printMsg(xml_file_path + ' 文件生成成功')    
+        logMsg(xml_file_path + ' 文件生成成功')    
 
 # 图片格式名称转XML格式名称
 def imgae_name_to_xml_name(image_name):
@@ -246,7 +285,7 @@ def bbox_to_temple(obj):
 if __name__ == "__main__":
     # 输入校验
     if(sys.argv.__len__() < 2):
-        printMsg('请输入参数1: 图片目录')
+        logMsg('请输入参数1: 图片目录')
         exit() 
 
     # 推理图片目录
@@ -262,4 +301,5 @@ if __name__ == "__main__":
     if sys.argv.__len__() > 3 and sys.argv[3]!= 'null':    
         skip = sys.argv[3] 
 
+    print(img_dir)
     ai_predict(img_dir,out_dir,skip)

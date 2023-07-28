@@ -2,3 +2,6 @@
 out_xml
 test_images
 TD_blue_helmet
+compare_xml
+target_xml
+__pycache__
