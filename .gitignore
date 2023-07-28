@@ -5,3 +5,4 @@ TD_blue_helmet
 compare_xml
 target_xml
 __pycache__
+*.log
