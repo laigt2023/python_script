@@ -18,6 +18,10 @@ compare_xml_dir = './compare_xml'
 # 跳过推理，直接输出上一次结果  True-跳过  False-不跳过推理
 SKIP_PREDICT=False
 
+def setSkipPredict(skip_predict):
+    global SKIP_PREDICT
+    SKIP_PREDICT = skip_predict
+
 def check_ai_models(img_dir,target_ai_task_id,compare_ai_task_id):
     emptyOutDir('./target_xml')
     print('清空目录:' + target_xml_dir)
@@ -31,9 +35,11 @@ def check_ai_models(img_dir,target_ai_task_id,compare_ai_task_id):
         AI_PREDICT.ai_predict(img_dir,target_xml_dir,True)
 
         # 推理对比模型
-        AI_PREDICT.setAiTaskId(compare_ai_task_id)
-        AI_PREDICT.ai_predict(img_dir,compare_xml_dir,True)
+        if compare_ai_task_id != '':
+            AI_PREDICT.setAiTaskId(compare_ai_task_id)
+            AI_PREDICT.ai_predict(img_dir,compare_xml_dir,True)
 
+    
     # 输入文件总数
     img_count = 0
     # 目标识别结果
@@ -58,15 +64,16 @@ def check_ai_models(img_dir,target_ai_task_id,compare_ai_task_id):
         for file in files:
             if file.endswith('.xml'):
                 compare_xml_count += 1
-    result = "----  检测结果  ----\n"
+    result = f"图片路径：{img_dir}\n"
+    result += "----  检测结果  ----\n"
     result += f'测试图片总数:{ img_count } - 全部为包含目标检测内容的测试集\n'
-    result += f'目标模型ID: {TARGET_AI_TASK_ID}\n'
-    result += f'对比模型ID: {COMPARE_AI_TASK_ID}\n'
+    result += f'目标模型ID: { target_ai_task_id }\n'
+    result += f'对比模型ID: { compare_ai_task_id }\n'
     result += f'目标模型识别结果 (目标模型识别/图片总数): { target_xml_count }/{ img_count }   目标模型识别率:{ numDividedFormat(target_xml_count , img_count) }\n'
     result += f'对比模型识别结果 (对比模型识别/图片总数): { compare_xml_count }/{ img_count}   对比模型识别率:{ numDividedFormat(compare_xml_count , img_count) }\n'
-    result += f'对比模型相同识别结果（对比模型相同识别数/目标模型识别数）: { same_xml_count }/{ target_xml_count }\n'
-    result += f'目标与对比模型再次识别率: { numDividedFormat(same_xml_count , compare_xml_count) }\n'
-    result += f'模板模型识别增长 (新增识别/识别总数): { target_xml_count - same_xml_count} / { target_xml_count }\n'
+    result += f'二次相同识别结果(相同识别数/目标模型识别数): { same_xml_count }/{ target_xml_count }\n'
+    result += f'二次识别率(再次识别率): { numDividedFormat(same_xml_count , compare_xml_count) }\n'
+    result += f'模板模型识别增长数 (新增识别个数/识别总数): { target_xml_count - same_xml_count} / { target_xml_count }\n'
     result += f'目标识别率提升: { numDividedFormat((target_xml_count - same_xml_count) , same_xml_count) }\n'
     print(result)
 
@@ -75,6 +82,7 @@ def check_ai_models(img_dir,target_ai_task_id,compare_ai_task_id):
         txt_file.write(result)
         print("对比结果文件生成成功(./result.log)")
 
+    return
 # 除法，分母为0时返回0
 def numDividedFormat(a,b):
     if b == 0:

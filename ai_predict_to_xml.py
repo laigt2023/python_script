@@ -48,8 +48,10 @@ def setAiIp(ai_ip):
 # 清空输出目录
 def emptyOutDir(out_dir): 
     if os.path.exists(out_dir):
-        os.remove(out_dir)
-        os.makedirs(out_dir)
+        # os.remove(out_dir)
+        for root, dirs, files in os.walk(out_dir):
+            for file in files:
+                os.remove(os.path.join(root, file))
     else:
         os.makedirs(out_dir)
 
@@ -137,8 +139,9 @@ def ai_predict(image_dir,out_dir,skip):
                                 create_xml_file(out_dir,filename,complete_xml)
                                      
                             else:
-                                logMsg(f'请求失败，状态码：{response.status_code}','false')
-                                logMsg(f'请求失败，状态码：{response.text}','false')
+                                logMsg(f'请求失败，文件{ filename }','false')
+                                logMsg(f'请求失败，状态码：{response.status_code} - {response.text}','false')
+                                continue
                 logMsg(f'任务ID：{AI_IP}  目标模型检测推理任务  end...','false')                
     except requests.exceptions.RequestException as e:
         logMsg(f'请求发生异常：{str(e)}')
