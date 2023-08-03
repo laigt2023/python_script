@@ -6,6 +6,8 @@ import requests
 import json 
 import base64
 
+# 用于进行AI模型推理/预标注，并输出xml文件
+
 # AI图片推理端接口地址接口地址
 AI_IP='192.168.19.240'
 # AI图片识别任务ID  就模型ID

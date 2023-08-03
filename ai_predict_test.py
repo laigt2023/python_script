@@ -5,8 +5,15 @@ import sys
 import requests
 import json 
 import base64
+import datetime
 
 import ai_predict_to_xml as AI_PREDICT 
+
+# 用于进行AI模型对比测试
+
+# 现在的时间
+startTime = datetime.datetime.now()
+
 
 # 对比模型
 TARGET_AI_TASK_ID='8f97a571-22e5-41e3-afed-8f525d8338af'
@@ -23,6 +30,8 @@ def setSkipPredict(skip_predict):
     SKIP_PREDICT = skip_predict
 
 def check_ai_models(img_dir,target_ai_task_id,compare_ai_task_id):
+    global startTime
+        
     emptyOutDir('./target_xml')
     print('清空目录:' + target_xml_dir)
     emptyOutDir('./compare_xml')
@@ -64,8 +73,11 @@ def check_ai_models(img_dir,target_ai_task_id,compare_ai_task_id):
         for file in files:
             if file.endswith('.xml'):
                 compare_xml_count += 1
-    result = f"图片路径：{img_dir}\n"
-    result += "----  检测结果  ----\n"
+
+    endTime = datetime.datetime.now()
+
+    result = f"图片路径: {img_dir}\n"
+    result += f"----  检测结果 开始时间:{ startTime.strftime('%Y-%m-%d %H:%M:%S') } ----\n"
     result += f'测试图片总数:{ img_count } - 全部为包含目标检测内容的测试集\n'
     result += f'目标模型ID: { target_ai_task_id }\n'
     result += f'对比模型ID: { compare_ai_task_id }\n'
@@ -75,10 +87,13 @@ def check_ai_models(img_dir,target_ai_task_id,compare_ai_task_id):
     result += f'二次识别率(再次识别率): { numDividedFormat(same_xml_count , compare_xml_count) }\n'
     result += f'模板模型识别增长数 (新增识别个数/识别总数): { target_xml_count - same_xml_count} / { target_xml_count }\n'
     result += f'目标识别率提升: { numDividedFormat((target_xml_count - same_xml_count) , same_xml_count) }\n'
+    result += f"----  检测结果 结束时间: { endTime.strftime('%Y-%m-%d %H:%M:%S') }  ----\n"
     print(result)
 
-    # 写入文件
-    with open("./result.log", 'w', encoding='utf-8') as txt_file:
+    # 写入文件  w-重新 a-追加
+    # with open("./result.log", 'w', encoding='utf-8') as txt_file:
+    with open("./result.log", 'a', encoding='utf-8') as txt_file:
+        result += f"\r\n"
         txt_file.write(result)
         print("对比结果文件生成成功(./result.log)")
 

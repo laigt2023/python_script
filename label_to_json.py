@@ -3,6 +3,8 @@ from string import Template
 import os
 import sys
 
+# 用于将【Open Images Dataset V7】label文件转换为xml文件
+
 # 标签名称
 dimension_label = 'bicycle'
 
