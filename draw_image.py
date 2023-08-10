@@ -54,9 +54,9 @@ def to_rgb(color):
     return (color[2],color[1],color[0])
 
 def draw_image(image_url,out_url,boxs):
-
+    # 无法识别中文路径，需要转换成英文路径
     image = cv2.imread(image_url)
-    
+    print(image_url)
     output_image = image.copy()
     for b in boxs:
         bbox=b["bbox"]

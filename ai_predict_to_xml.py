@@ -64,7 +64,7 @@ def emptyOutDir(out_dir):
 # skip : 是否跳过已存在的xml文件
 # IS_OUTPUT_JPEG  是否输出标注后的图片 目录为out_dir
 # 入参存在task_api_url 则优先使用task_api_url
-def ai_predict(image_dir,out_dir,skip,IS_OUTPUT_JPEG=False,task_api_url=Null):
+def ai_predict(image_dir,out_dir,skip,IS_OUTPUT_JPEG=False,task_api_url=False):
     try:
          # 重置计数器
         global file_count
