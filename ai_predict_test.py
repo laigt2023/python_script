@@ -29,7 +29,11 @@ def setSkipPredict(skip_predict):
     global SKIP_PREDICT
     SKIP_PREDICT = skip_predict
 
-def check_ai_models(img_dir,target_ai_task_id,compare_ai_task_id):
+# img_dir: 图片目录
+# target_ai_task_id: 目标模型ID
+# compare_ai_task_id: 对比模型ID
+# IS_OUTPUT_JPEG: 是否输出识别后的图片
+def check_ai_models(img_dir,target_ai_task_id,compare_ai_task_id,IS_OUTPUT_JPEG=False):
     global startTime
         
     emptyOutDir('./target_xml')
@@ -41,12 +45,12 @@ def check_ai_models(img_dir,target_ai_task_id,compare_ai_task_id):
         print('跳过推理目标模型')
         # 推理目标模型
         AI_PREDICT.setAiTaskId(target_ai_task_id)
-        AI_PREDICT.ai_predict(img_dir,target_xml_dir,True)
+        AI_PREDICT.ai_predict(img_dir,target_xml_dir,True,IS_OUTPUT_JPEG)
 
         # 推理对比模型
         if compare_ai_task_id != '':
             AI_PREDICT.setAiTaskId(compare_ai_task_id)
-            AI_PREDICT.ai_predict(img_dir,compare_xml_dir,True)
+            AI_PREDICT.ai_predict(img_dir,compare_xml_dir,True,IS_OUTPUT_JPEG)
 
     
     # 输入文件总数

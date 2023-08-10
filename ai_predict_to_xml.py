@@ -5,6 +5,7 @@ import sys
 import requests
 import json 
 import base64
+import draw_image
 
 # 用于进行AI模型推理/预标注，并输出xml文件
 
@@ -61,7 +62,9 @@ def emptyOutDir(out_dir):
 # image_dir: 图片目录
 # out_dir: 输出目录
 # skip : 是否跳过已存在的xml文件
-def ai_predict(image_dir,out_dir,skip):
+# IS_OUTPUT_JPEG  是否输出标注后的图片 目录为out_dir
+# 入参存在task_api_url 则优先使用task_api_url
+def ai_predict(image_dir,out_dir,skip,IS_OUTPUT_JPEG=False,task_api_url=Null):
     try:
          # 重置计数器
         global file_count
@@ -72,7 +75,11 @@ def ai_predict(image_dir,out_dir,skip):
         success_count = int(0)
 
         api_url = getAI_API_URL()
-   
+
+        # 入参存在task_api_url 则优先使用task_api_url
+        if task_api_url:
+            api_url = task_api_url
+
         for root, dirs, files in os.walk(image_dir):
             if files:
                 # 记录文件列表总数
@@ -139,7 +146,15 @@ def ai_predict(image_dir,out_dir,skip):
                                 complete_xml = head_xml + all_box_xml + head_xml_end_format() 
                                 # 生成xml文件
                                 create_xml_file(out_dir,filename,complete_xml)
-                                     
+
+                                # 生成带有标签的jpeg图片
+                                if IS_OUTPUT_JPEG == True:
+                                    inputImage = image_dir + os.path.sep + filename
+                                    outputImage = out_dir + os.path.sep + filename
+                                    outputImage = outputImage.lower().replace('.jpg','.jpeg')
+                                    message,out_url = draw_image.draw_image(inputImage,outputImage,labels)
+                                    logMsg(f'{ message }','false')
+
                             else:
                                 logMsg(f'请求失败，文件{ filename }','false')
                                 logMsg(f'请求失败，状态码：{response.status_code} - {response.text}','false')
@@ -299,12 +314,22 @@ if __name__ == "__main__":
     out_dir = './out_xml'
     # 是否跳过已存在的xml文件     true-跳过，false-不跳过，默认true
     skip = 'true'
-
+    is_output_jpeg = False
+    task_api_url = ''
     if sys.argv.__len__() > 2 and sys.argv[2] != 'null':
         out_dir = sys.argv[2]
 
     if sys.argv.__len__() > 3 and sys.argv[3]!= 'null':    
         skip = sys.argv[3] 
 
-    print(img_dir)
-    ai_predict(img_dir,out_dir,skip)
+    if sys.argv.__len__() > 4 and sys.argv[4]!= 'null':
+        if sys.argv[4] == 'true':    
+            is_output_jpeg = True 
+        else:
+            is_output_jpeg = False
+
+    if sys.argv.__len__() > 5 and sys.argv[5]!= 'null':
+        task_api_url = sys.argv[5]      
+
+    print(sys.argv)
+    ai_predict(img_dir,out_dir,skip,is_output_jpeg,task_api_url)

@@ -7,9 +7,12 @@ import ai_predict_test as AI_API
 # 比较模型输出到./compare_xml
 # COMPARE_AI_TASK_ID 为空时，只输出目标模型的xml，统计时无对比数据
 
-img_dir=r"D:\工作交接\智慧工地\吸烟视频\中医院\0802\smoke\somke_0_input"
-TARGET_AI_TASK_ID="e0b75053-52ec-4023-916f-a6d5ac523c64"
-COMPARE_AI_TASK_ID=""
+# img_dir=r"D:\工作交接\智慧工地\训练集\吸烟\0804-新模型\smoke_train_20230804155030\opt\gongdi\biaozhu\image\val"
+img_dir=r"D:\工作交接\智慧工地\吸烟视频\中医院\0802\smoke\somke_2_input"
+# f41ee782-f34a-465a-a34b-7cddd50ea1f9 - 香烟图片识别V1-NEW（目标模型）
+# 530cb7d0-8c0d-47ee-a2f3-a20e11bbad8e - 抽烟检测V2（New）
+TARGET_AI_TASK_ID="530cb7d0-8c0d-47ee-a2f3-a20e11bbad8e"
+COMPARE_AI_TASK_ID="f41ee782-f34a-465a-a34b-7cddd50ea1f9"
 # 主函数
 if __name__ == "__main__":
     # 是否跳过推理过程，直接输出上次推理结果
