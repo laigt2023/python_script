@@ -6,6 +6,7 @@ import requests
 import json 
 import base64
 import draw_image
+import report_event_image as REPORT_INSTANCE
 
 # 用于进行AI模型推理/预标注，并输出xml文件
 
@@ -16,6 +17,9 @@ AI_IP='192.168.19.240'
 
 # 新模型任务ID：8f97a571-22e5-41e3-afed-8f525d8338af
 AI_TASK_ID='8f97a571-22e5-41e3-afed-8f525d8338af'
+
+# 是否上报事件
+IS_REPORT_EVENT = True
 
 # AI图片推理端接口地址
 def getAI_API_URL():
@@ -63,8 +67,9 @@ def emptyOutDir(out_dir):
 # out_dir: 输出目录
 # skip : 是否跳过已存在的xml文件
 # IS_OUTPUT_JPEG  是否输出标注后的图片 目录为out_dir
-# 入参存在task_api_url 则优先使用task_api_url
-def ai_predict(image_dir,out_dir,skip,IS_OUTPUT_JPEG=False,task_api_url=False):
+# task_api_url AI服务地址 入参存在task_api_url 则优先使用task_api_url
+# report_event_url 事件上报地址 默认:False-不上报 True-使用默认配置   填入url则使用URL
+def ai_predict(image_dir,out_dir,skip,IS_OUTPUT_JPEG=False,task_api_url=False,report_event_url=False):
     try:
          # 重置计数器
         global file_count
@@ -150,8 +155,7 @@ def ai_predict(image_dir,out_dir,skip,IS_OUTPUT_JPEG=False,task_api_url=False):
                                 # 生成带有标签的jpeg图片
                                 if IS_OUTPUT_JPEG == True:
                                     inputImage = image_dir + os.path.sep + filename
-                                    outputImage = out_dir + os.path.sep + filename
-                                    outputImage = outputImage.lower().replace('.jpg','.jpeg')
+                                    outputImage = out_dir + os.path.sep + filename.replace('.jpg','.jpeg')
                                     message,out_url = draw_image.draw_image(inputImage,outputImage,labels)
                                     logMsg(f'{ message }','false')
 
@@ -159,7 +163,14 @@ def ai_predict(image_dir,out_dir,skip,IS_OUTPUT_JPEG=False,task_api_url=False):
                                 logMsg(f'请求失败，文件{ filename }','false')
                                 logMsg(f'请求失败，状态码：{response.status_code} - {response.text}','false')
                                 continue
-                logMsg(f'任务ID：{AI_IP}  目标模型检测推理任务  end...','false')                
+                logMsg(f'任务ID：{AI_IP}  目标模型检测推理任务  end...','false')  
+
+                if IS_OUTPUT_JPEG and report_event_url:
+                    # 上报事件
+                    # 使用脚本的额默认report_url
+                    REPORT_INSTANCE.report_event_image(out_dir,True)
+                           
+
     except requests.exceptions.RequestException as e:
         logMsg(f'请求发生异常：{str(e)}')
         logMsg(f'任务ID：{AI_IP}  目标模型检测推理任务  end...','false')     
@@ -315,6 +326,7 @@ if __name__ == "__main__":
     # 是否跳过已存在的xml文件     true-跳过，false-不跳过，默认true
     skip = 'true'
     is_output_jpeg = False
+    report_event_url = False
     task_api_url = ''
     if sys.argv.__len__() > 2 and sys.argv[2] != 'null':
         out_dir = sys.argv[2]
@@ -331,5 +343,8 @@ if __name__ == "__main__":
     if sys.argv.__len__() > 5 and sys.argv[5]!= 'null':
         task_api_url = sys.argv[5]      
 
+    if sys.argv.__len__() > 6 and sys.argv[6]!= 'null':
+        report_event_url = sys.argv[6] 
+
     print(sys.argv)
-    ai_predict(img_dir,out_dir,skip,is_output_jpeg,task_api_url)
+    ai_predict(img_dir,out_dir,skip,is_output_jpeg,task_api_url,report_event_url)
