@@ -32,7 +32,7 @@ def report_event_image(image_dir, report_url):
     dir_name = array[array.__len__() - 1]
 
     current_ai_type_key = ''
-    current_ai_type_event_id = ''
+    current_ai_event_type = ''
     fileName=''
     cameraName=''
 
@@ -46,7 +46,7 @@ def report_event_image(image_dir, report_url):
     for t in AI_TYPES:
         if image_dir.endswith("_" + t["key"] + SUFFIX):
             current_ai_type= t["key"]
-            current_ai_type_event_id= t["eventType"]
+            current_ai_event_type= t["eventType"]
             fileName= dir_name.replace("_" + t["key"] + SUFFIX,'')
             break
 
@@ -68,8 +68,8 @@ def report_event_image(image_dir, report_url):
         "alarmDate" : array[array.__len__() - 2],
         # 告警视频名称
         "videoName" : fileName + '.mp4',
-        # 告警类型 'helmet' - 安全帽 'vest' - 反光衣
-        "alarmType" : current_ai_type_event_id,
+        # 上报事件类型汇总，helmet-安全帽，vest-反光衣  事件类型：0-安全帽监测、1-反光衣监测、15-安全帽+人脸识别、16-反光衣+人脸识别
+        "eventType" : current_ai_event_type,
 
         # 安全帽名称
         "cameraName":cameraName,
