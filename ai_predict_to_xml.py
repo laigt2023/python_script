@@ -141,7 +141,9 @@ def ai_predict(image_dir,out_dir,skip,IS_OUTPUT_JPEG=False,task_api_url=False,re
                                             'x_min' : int(float(label_box.get("left_top_x"))), 
                                             'y_min' : int(float(label_box.get("left_top_y"))), 
                                             'x_max' : int(float(label_box.get("right_bottom_x"))), 
-                                            'y_max' : int(float(label_box.get("right_bottom_y")))
+                                            'y_max' : int(float(label_box.get("right_bottom_y"))),
+                                            'color' : RGB_to_Hex(to_rgb(box.get('color'))),
+                                            'prob'  : box.get('prob')
                                         }
                                         xml=bbox_to_temple(bbox_data)
                                         all_box_xml = all_box_xml + xml
@@ -280,17 +282,40 @@ def check_obj_data(obj_data):
         result = False
     if isNotEmpty(obj_data,'y_max'):
         result = False       
-    return result
+    return {
+        'name': obj_data['name'],
+        'x_min': int(float(obj_data['x_min'])),
+        'y_min': int(float(obj_data['y_min'])),
+        'x_max': int(float(obj_data['x_max'])),
+        'y_max': int(float(obj_data['y_max'])),
+        'color': obj_data['color'] or '#FF0000',
+        'prob' : obj_data['prob'] or '1'
+    }
+
+# 转成RGB格式
+def to_rgb(color):
+    return f"{color[0]},{color[1]},{color[2]}"
+
+# RGB转16进制 tmp例子：'255,255,255'
+def RGB_to_Hex(tmp):
+    rgb = tmp.split(',')#将RGB格式划分开来
+    strs = '#'
+    for i in rgb:
+        num = int(i)#将str转int
+        #将R、G、B分别转化为16进制拼接转换并大写
+        strs += str(hex(num))[-2:].replace('x','0').upper()
+        
+    return strs
 
 # 检测数据项是否为空
 # obj: 数据对象
 def isNotEmpty(obj, key):
     if key in obj:
         if obj[key] == '':
-            raise Exception(file_name + ':  ' + key +' is null')
+            raise Exception(key +' is null')
         return True    
     else:
-        raise Exception(file_name + ':  ' + key +' is null')
+        raise Exception(key +' is null')
 
     # 坐标点封装模板
 def bbox_to_temple(obj):
@@ -302,6 +327,8 @@ def bbox_to_temple(obj):
             <pose>Unspecified</pose>
             <truncated>0</truncated>
             <difficult>0</difficult>
+            <color>$color</color>
+            <prob>$prob</prob>
             <bndbox>
                 <xmin>$x_min</xmin>
                 <ymin>$y_min</ymin>

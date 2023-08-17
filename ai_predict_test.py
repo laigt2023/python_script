@@ -122,7 +122,7 @@ def emptyOutDir(out_dir):
 if __name__ == "__main__":
     # 输入校验
     if(sys.argv.__len__() < 2):
-        printMsg('请输入参数1: 图片目录')
+        print('请输入参数1: 图片目录')
         exit() 
 
     # 推理图片目录

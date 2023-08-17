@@ -45,12 +45,12 @@ def report_event_image(image_dir, report_url):
     
     for t in AI_TYPES:
         if image_dir.endswith("_" + t["key"] + SUFFIX):
-            current_ai_type= t["key"]
+            current_ai_type_key= t["key"]
             current_ai_event_type= t["eventType"]
             fileName= dir_name.replace("_" + t["key"] + SUFFIX,'')
             break
 
-    if current_ai_type == '':
+    if current_ai_type_key == '':
         logMesg('未找到对应的AI类型:' + image_dir)
         return
 
@@ -73,6 +73,10 @@ def report_event_image(image_dir, report_url):
 
         # 安全帽名称
         "cameraName":cameraName,
+        # 告警图片base64编码
+        "alarmPicture":"",
+        # 告警时间戳 ms
+        "alarmTime":0,
         # 
         # 发件告警的时间戳 "alarmTime" : int(round(time.time() * 1000)),
         # 人脸识别信息：身份证号
@@ -82,21 +86,27 @@ def report_event_image(image_dir, report_url):
     
     # 发件告警的时间戳
     alarmTime = int(round(time.time() * 1000))
-    logMesg(f"事件上报( {report_url} )  start...")
+    logMesg(f"事件上报( {report_url} ) { image_dir }  { current_ai_type_key }  start...")
     # 读取目标模型的jepg文件
     for root, dirs, files in os.walk(image_dir):
         for f in files:
-            if f.endswith('.jpeg'):
+            # if f.endswith('.jpeg'):
+            # 调整为上传原图
+            if f.endswith('.jpg'):
                 # 读取图片文件
-                jpeg_file_path = root + os.path.sep + f
+                # jpeg_file_path = root + os.path.sep + f
+                jpg_file_path = root + os.path.sep + f
                 post_data["info"] = []
-                with open(jpeg_file_path, 'rb') as jpeg_file:
-                    if jpeg_file:
+                post_data["alarmPicture"] = ''
+                with open(jpg_file_path, 'rb') as jpg_file:
+                    if jpg_file:
                         # 构建请求参数
-                        image_base_code = base64.b64encode(jpeg_file.read()).decode('utf-8')
+                        image_base_code = base64.b64encode(jpg_file.read()).decode('utf-8')
+                        post_data["alarmPicture"] = image_base_code
+                        post_data["alarmTime"] = alarmTime
 
-                        xml_file_path = jpeg_file_path.replace('.jpeg', '.xml')
-                        target_count = 1
+                        xml_file_path = jpg_file_path.replace('.jpg', '.xml')
+                        # target_count = 1
 
                         # 从xml文件中获取目标数量
                         with open(xml_file_path, 'rb') as xml_file:
@@ -104,14 +114,35 @@ def report_event_image(image_dir, report_url):
                                 tree = ET.parse(xml_file_path)
                                 xml_root = tree.getroot()
 
+                                # 遍历所有的【object】节点
+                                for obj in xml_root.iter('object'):
+                                    name = obj.find('name').text
+                                    xmin = obj.find('bndbox/xmin').text
+                                    ymin = obj.find('bndbox/ymin').text
+                                    xmax = obj.find('bndbox/xmax').text
+                                    ymax = obj.find('bndbox/ymax').text
+                                    prob = obj.find('prob').text
+                                    color = obj.find('color').text
+
+                                    item={
+                                        "coordinate":f"{xmin},{ymin},{xmax},{ymax}",
+                                        "label":name,
+                                        "color":color,
+                                        "confidence":prob,
+                                        "cardId":""
+                                    }
+
+                                    post_data["info"].append(item)                                                                                                                      
+
+
                                 # 获取特定元素的数量
-                                target_count = len(xml_root.findall('object'))
+                                # target_count = len(xml_root.findall('object'))
 
-                        for _ in range(target_count):
-                            # 构建告警详情
-                            infoItem = getInfoItem(alarmTime,image_base_code)
+                        # for _ in range(target_count):
+                        #     # 构建告警详情
+                        #     infoItem = getInfoItem(alarmTime,image_base_code)
 
-                            post_data["info"].append(infoItem)
+                        #     post_data["info"].append(infoItem)
                         
                         json_data = json.dumps(post_data)
 
