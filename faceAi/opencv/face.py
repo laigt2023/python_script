@@ -170,15 +170,14 @@ def showFace(pic_path=''):
 def faceDemo(picDir='',test_pic=''):
     global TEST_FACE_CACHE
     global COMPARISON_COUNT
+    # 匹配文件计数器
+    global COMPARISON_COUNT
+    COMPARISON_COUNT = 0
 
     face_db_encodes=[]
   
     # 展示图片
-    image = face_recognition.load_image_file(test_pic)
-
-    # 匹配文件计数器
-    global COMPARISON_COUNT
-    COMPARISON_COUNT = 0
+    image = cv.imread(test_pic)
 
     face_map={}
     # 对比所有人脸库
@@ -229,7 +228,7 @@ def faceDemo(picDir='',test_pic=''):
         else:
             persion_text = list[0]['persion_name']
 
-        
+        # 画人脸框
         image=drawFaceFunc(image,list[0]['location'],persion_text)    
         print(list[0]['location'],persion_text)
 
@@ -252,9 +251,10 @@ if __name__ == "__main__":
     start_time = time.time()
 
     # 人脸匹配
-    image = faceDemo(picDir='./data/jm/',test_pic='./face3.jpg')
+    # image = faceDemo(picDir='./data/jm/',test_pic='./face3.jpg')
     # image = faceDemo(picDir='./data/jm/',test_pic='./face1.jpg')
-
+    image = faceDemo(picDir='./data/jm/',test_pic='./test/04.jpg')
+    # image2 = faceDemo(picDir='./data/jm/',test_pic='./test/03.jpg')  侧脸无法识别
     end_time =  time.time()
     run_time = end_time - start_time
     # 打印运行时间
@@ -264,6 +264,7 @@ if __name__ == "__main__":
     print("程序总耗时：", round(run_time,2), "秒")
 
     cv.imshow("face",image)
+    # cv.imshow("face2",image2)
     if cv.waitKey(0) & 0xFF ==("q"):
         cv.destroyAllWindows()  
 

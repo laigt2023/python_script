@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     print("人脸数据库加载开始时间：", current_time)
     print("人脸数据库加载完成时间：", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    print("人脸数据库写入总耗时：", round(run_time,2), "秒")
+    print("人脸数据库数据更新完成，总耗时：", round(run_time,2), "秒")
 
 
 
