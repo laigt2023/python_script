@@ -117,47 +117,50 @@ def funDb(target_img):
     global RECOGNITION_COUNT
     global TARGET_BBOXES_CACHE
     global TARGET_KPSS_CACHE
-    global TARGET_FEAT_CACHE
 
     faet_db = DB.load_face_db()
+
+    # max_num 最大识别人脸数
+    if TARGET_BBOXES_CACHE.any() and TARGET_KPSS_CACHE.any():
+        target_bboxes = TARGET_BBOXES_CACHE
+        target_kpss = TARGET_KPSS_CACHE
+    else:
+        TARGET_BBOXES_CACHE, TARGET_KPSS_CACHE = detector.autodetect(target_img, max_num=10)
+        target_bboxes = TARGET_BBOXES_CACHE
+        target_kpss = TARGET_KPSS_CACHE
+
+    if target_bboxes.shape[0]==0:
+        return []
+
+    # 获取到每个人脸的 feat
+    feat_start_time = time.time()
+    target_feat_list = []
+
     
+    for box_num in range(len(target_bboxes)):
+        # 加载对应的人脸信息
+        f = rec.get(target_img, target_kpss[box_num])
+        print("feat编码耗时:", round(time.time() - feat_start_time,2),'秒', 'box数量',len(target_bboxes) )   
+        TARGET_FEAT_LIST_CACHE.append(f)
+        target_feat_list.append(f)    
+
     result=[]
 
-    for db in faet_db:
-        db_persion_name = db["name"]
-        face_db_feat = db["feat"]
-        
-        # max_num 最大识别人脸数
-        if TARGET_BBOXES_CACHE.any() and TARGET_KPSS_CACHE.any() :
-            target_bboxes = TARGET_BBOXES_CACHE
-            target_kpss = TARGET_KPSS_CACHE
-        else:
-            TARGET_BBOXES_CACHE, TARGET_KPSS_CACHE = detector.autodetect(target_img, max_num=10)
-            target_bboxes = TARGET_BBOXES_CACHE
-            target_kpss = TARGET_KPSS_CACHE
-
-        if target_bboxes.shape[0]==0:
-            return -1.0, "Face not found in Image-1"
-        
-        for num in range(len(target_bboxes)):
-            # 目标图片中的人脸数据
-            target_feat_list = []
-            # 缓存中没有人脸信息，则按照下标加载
-            if len(TARGET_FEAT_LIST_CACHE):
-                target_feat_list = TARGET_FEAT_LIST_CACHE
-            else:
-                for box_num in range(len(target_bboxes)):
-                    # 加载对应的人脸信息
-                    f = rec.get(target_img, target_kpss[box_num])
-                    TARGET_FEAT_LIST_CACHE.append(f)
-                    target_feat_list.append(f)
-                    
+    for num in range(len(target_feat_list)):
+       
+        for db in faet_db:
+            db_persion_name = db["name"]
+            face_db_feat = db["feat"]
+            
             # 进行人脸数据对比        
             sim = rec.compute_sim(target_feat_list[num], face_db_feat)
 
             RECOGNITION_COUNT += 1
             box = target_bboxes[num]
             x1,y1,x2,y2,o=int(box[0]),int(box[1]),int(box[2]),int(box[3]),float(box[4])
+
+            if IS_SHOW_TARGET_IMG: 
+                cv.rectangle(target_img, (x1, y1), (x2, y2), (0, 0, 255), 2)  
             
             if sim<0.2:
                 conclu = 'NOT the same person'
@@ -167,11 +170,8 @@ def funDb(target_img):
                 conclu = 'ARE the same person'
                 result.append({"name":db_persion_name,"sim":sim,"box":[(x1, y1), (x2, y2)]})   
                 if IS_SHOW_TARGET_IMG: 
-                    cv.rectangle(target_img, (x1, y1), (x2, y2), (0, 0, 255), 2)   
                     cv.putText(target_img,db_persion_name + ' '+ str(round(sim,2)), (x1, y1 - 5 ),cv.FONT_HERSHEY_COMPLEX,0.5,(0,255,0),1)
-                       
-            print(db_persion_name, " sim:",(x1, y1), (x2, y2),conclu,"box:",[(x1, y1), (x2, y2)])
-             
+       
     return result
 
 
@@ -198,7 +198,7 @@ if __name__ == '__main__':
         print("人脸比对结果:")
     else:
         print("人脸库不存在匹配信息")
-           
+
     for one in result:
         print(one)
 
