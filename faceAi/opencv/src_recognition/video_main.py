@@ -110,10 +110,10 @@ def funDb(target_img):
 if __name__ == '__main__':
     cap = cv.VideoCapture('../img/PU_01.mp4')
     count = 0
-    fps = 1
+    fps = 4
+
     if not cap.isOpened():
         print("Error opening video file")
-
     while cap.isOpened():
         ret, frame = cap.read()
         
@@ -128,6 +128,9 @@ if __name__ == '__main__':
                 print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),'名称',one['name'],'sim',str(round(one['sim'],2)),'box',one['box'])
 
             cv.imshow('frame',frame)
+            # 导出图片  需要手动创建./input_frame 文件夹
+            # cv.imwrite('./input_frame/img_'+ str(count) +'.jpg', frame)
+           
             print("当前帧耗时:", round(time.time() -start_time,2),'秒' )      
 
         # cv.imshow('Video', frame)
