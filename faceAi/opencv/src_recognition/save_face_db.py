@@ -11,10 +11,10 @@ from arcface_onnx import ArcFaceONNX
 import os.path as osp
 
 # 人脸库文件目录
-FACE_ENCODES_DB_FILE = './face_db.json'
+FACE_ENCODES_DB_FILE = './fzx_face_db.json'
 
-# 人脸图片存放目录
-FACE_ENCODES_DB_IMAGE_DIR = '../data/jm/'
+# 人脸图片存放目录 (如：../data/jm/db/)
+FACE_ENCODES_DB_IMAGE_DIR = '../data/jm/fzx_face_db/'
 
 
 app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
@@ -44,7 +44,7 @@ def save_face_db(face_db_dir):
                 load_face_start_time = time.time()
                 
                 filename = file
-                db_persion_name = filename.split(".")[1]
+                db_persion_name = filename.split(".")[0]
 
                 fac_db_img = get_img(face_db_dir + file)
                 fac_db_bboxes, fac_db_kpss = detector.autodetect(fac_db_img, max_num=1)
@@ -53,7 +53,7 @@ def save_face_db(face_db_dir):
 
                 face_db_kps = fac_db_kpss[0]
                 face_db_feat = rec.get(fac_db_img, face_db_kps)
-                print("加载人脸耗时", round(time.time() - load_face_start_time,2) ,'秒')
+                print("加载人脸耗时(",filename," : ",db_persion_name,")", round(time.time() - load_face_start_time,2) ,'秒')
                 item = {
                     "name":db_persion_name,
                     "feat":face_db_feat.tolist()
@@ -85,6 +85,7 @@ if __name__ == "__main__":
     now = datetime.datetime.now()
     current_time = now.strftime("%Y-%m-%d %H:%M:%S")
     print("人脸数据库加载开始时间：", current_time)
+
     start_time = time.time()
 
     # 写入文件
@@ -98,6 +99,8 @@ if __name__ == "__main__":
     # 打印运行时间
 
     print("人脸数据库加载开始时间：", current_time)
+    print("人脸数据库加载目录：", FACE_ENCODES_DB_IMAGE_DIR)
+    print("人脸数据库输出文件：", FACE_ENCODES_DB_FILE)
     print("人脸数据库加载完成时间：", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     print("人脸数据库数据更新完成，总耗时：", round(run_time,2), "秒")
 

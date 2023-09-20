@@ -12,6 +12,7 @@ from arcface_onnx import ArcFaceONNX
 import save_face_db as DB
 import datetime
 import time
+from PIL import Image, ImageDraw, ImageFont
 
 print(onnxruntime.get_available_providers())
 print(onnxruntime.get_device())
@@ -34,6 +35,11 @@ TARGET_BBOXES_CACHE=np.array([])
 TARGET_KPSS_CACHE=np.array([])
 TARGET_FEAT_LIST_CACHE=[]
 
+# 是否保存匹配成功的图片
+IS_SAVE_FACE_CP_SUCCESS_IMG=True
+SAVE_FACE_CP_SUCCESS_IMG_COUNT = 0
+SAVE_FACE_CP_SUCCESS_IMG_PATH='./cp_sucess_img/'
+
 def get_img(path):
      return cv.imdecode(np.fromfile(path, dtype=np.uint8), cv.IMREAD_COLOR)
 
@@ -50,6 +56,9 @@ def funDb(target_img):
     global RECOGNITION_COUNT
     global TARGET_BBOXES_CACHE
     global TARGET_KPSS_CACHE
+    global IS_SAVE_FACE_CP_SUCCESS_IMG
+    global SAVE_FACE_CP_SUCCESS_IMG_PATH
+    global SAVE_FACE_CP_SUCCESS_IMG_COUNT
 
     faet_db = DB.load_face_db()
 
@@ -101,14 +110,35 @@ def funDb(target_img):
                 conclu = 'ARE the same person'
                 result.append({"name":db_persion_name,"sim":sim,"box":[(x1, y1), (x2, y2)]})   
                 # if IS_SHOW_TARGET_IMG: 
-                 
-                cv.putText(target_img,db_persion_name + ' '+ str(round(sim,2)), (x1, y1 - 5 ),cv.FONT_HERSHEY_COMPLEX,0.5,(0,255,0),1)
-       
+                target_img=cvAddChineseText(target_img,db_persion_name + ' '+ str(round(sim,2)), (x1, y1 - 18 ),(0,255,0),15)
+
+                if IS_SAVE_FACE_CP_SUCCESS_IMG:
+                    SAVE_FACE_CP_SUCCESS_IMG_COUNT = SAVE_FACE_CP_SUCCESS_IMG_COUNT + 1 
+                    cv.imwrite(SAVE_FACE_CP_SUCCESS_IMG_PATH + str(SAVE_FACE_CP_SUCCESS_IMG_COUNT) +'.jpg',target_img)
+
+                # cv.putText(target_img,db_persion_name + ' '+ str(round(sim,2)), (x1, y1 - 5 ),cv.FONT_HERSHEY_COMPLEX,0.5,(0,255,0),1)
+
+    cv.imshow('frame',target_img)   
     return result
+
+# 中文标签
+def cvAddChineseText(img, text, position, textColor=(0, 255, 0), textSize=30):
+    if (isinstance(img, np.ndarray)):  # 判断是否OpenCV图片类型
+        img = Image.fromarray(cv.cvtColor(img, cv.COLOR_BGR2RGB))
+    # 创建一个可以在给定图像上绘图的对象
+    draw = ImageDraw.Draw(img)
+    # 字体的格式
+    fontStyle = ImageFont.truetype(
+        "simsun.ttc", textSize, encoding="utf-8")
+    # 绘制文本
+    draw.text(position, text, textColor, font=fontStyle)
+    # 转换回OpenCV格式
+    return cv.cvtColor(np.asarray(img), cv.COLOR_RGB2BGR)
 
 
 if __name__ == '__main__':
-    cap = cv.VideoCapture('../img/PU_01.mp4')
+    # cap = cv.VideoCapture('../img/PU_01.mp4')
+    cap = cv.VideoCapture(r'E:\faces_emore\dataset2\fa20230919_100452.mp4')
     count = 0
     fps = 4
 
@@ -127,7 +157,7 @@ if __name__ == '__main__':
             for one in result:
                 print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),'名称',one['name'],'sim',str(round(one['sim'],2)),'box',one['box'])
 
-            cv.imshow('frame',frame)
+            # cv.imshow('frame',frame)
             # 导出图片  需要手动创建./input_frame 文件夹
             # cv.imwrite('./input_frame/img_'+ str(count) +'.jpg', frame)
            

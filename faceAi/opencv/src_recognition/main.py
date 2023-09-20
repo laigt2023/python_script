@@ -13,11 +13,11 @@ import save_face_db as DB
 import datetime
 import time
 
-print(onnxruntime.get_available_providers())
-print(onnxruntime.get_device())
 onnxruntime.set_default_logger_severity(3)
 
-IS_SHOW_TARGET_IMG = True
+# 是否展示推理后图片
+IS_SHOW_TARGET_IMG = False
+# 人脸匹配计数器
 RECOGNITION_COUNT = 0
 
 assets_dir = osp.expanduser('~/.insightface/models/buffalo_l')
@@ -204,10 +204,13 @@ if __name__ == '__main__':
 
     run_time = time.time() - start_time
 
-    print("人脸比对次数", RECOGNITION_COUNT,"每次平均耗时", round(run_time / RECOGNITION_COUNT,2),"秒")
+    print("执行提供程序：",onnxruntime.get_available_providers())
+    print(onnxruntime.get_device())
+    
+    print("人脸比对次数", RECOGNITION_COUNT,"每次平均耗时", round(run_time / RECOGNITION_COUNT,4),"秒")
     print("程序开始时间：", current_time)
     print("程序当前时间：", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    print("程序总耗时：", round(run_time,2), "秒")
+    print("程序总耗时：", round(run_time,4), "秒")
 
     if IS_SHOW_TARGET_IMG:      
         cv.imshow("insightface",target_img)
