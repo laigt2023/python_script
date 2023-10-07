@@ -12,6 +12,7 @@ from arcface_onnx import ArcFaceONNX
 import save_face_db as DB
 import datetime
 import time
+import sys
 from PIL import Image, ImageDraw, ImageFont
 
 print(onnxruntime.get_available_providers())
@@ -40,6 +41,9 @@ IS_SAVE_FACE_CP_SUCCESS_IMG=True
 SAVE_FACE_CP_SUCCESS_IMG_COUNT = 0
 SAVE_FACE_CP_SUCCESS_IMG_PATH='./cp_sucess_img/'
 
+# 是否显示记录耗时
+IS_SHOW_RECORDING_TIME = False
+
 def get_img(path):
      return cv.imdecode(np.fromfile(path, dtype=np.uint8), cv.IMREAD_COLOR)
 
@@ -59,6 +63,7 @@ def funDb(target_img):
     global IS_SAVE_FACE_CP_SUCCESS_IMG
     global SAVE_FACE_CP_SUCCESS_IMG_PATH
     global SAVE_FACE_CP_SUCCESS_IMG_COUNT
+    global IS_SHOW_RECORDING_TIME
 
     faet_db = DB.load_face_db()
 
@@ -82,7 +87,8 @@ def funDb(target_img):
     for box_num in range(len(target_bboxes)):
         # 加载对应的人脸信息
         f = rec.get(target_img, target_kpss[box_num])
-        print("feat编码耗时:", round(time.time() - feat_start_time,2),'秒', 'box数量',len(target_bboxes) )   
+        if IS_SHOW_RECORDING_TIME:
+            print("feat编码耗时:", round(time.time() - feat_start_time,2),'秒', 'box数量',len(target_bboxes) )   
         TARGET_FEAT_LIST_CACHE.append(f)
         target_feat_list.append(f)    
 
@@ -109,16 +115,16 @@ def funDb(target_img):
             else:
                 conclu = 'ARE the same person'
                 result.append({"name":db_persion_name,"sim":sim,"box":[(x1, y1), (x2, y2)]})   
-                # if IS_SHOW_TARGET_IMG: 
-                target_img=cvAddChineseText(target_img,db_persion_name + ' '+ str(round(sim,2)), (x1, y1 - 18 ),(0,255,0),15)
+                if IS_SHOW_TARGET_IMG: 
+                    target_img=cvAddChineseText(target_img,db_persion_name + ' '+ str(round(sim,2)), (x1, y1 - 18 ),(0,255,0),15)
 
                 if IS_SAVE_FACE_CP_SUCCESS_IMG:
                     SAVE_FACE_CP_SUCCESS_IMG_COUNT = SAVE_FACE_CP_SUCCESS_IMG_COUNT + 1 
                     cv.imwrite(SAVE_FACE_CP_SUCCESS_IMG_PATH + str(SAVE_FACE_CP_SUCCESS_IMG_COUNT) +'.jpg',target_img)
 
                 # cv.putText(target_img,db_persion_name + ' '+ str(round(sim,2)), (x1, y1 - 5 ),cv.FONT_HERSHEY_COMPLEX,0.5,(0,255,0),1)
-
-    cv.imshow('frame',target_img)   
+    if IS_SHOW_TARGET_IMG: 
+        cv.imshow('frame',target_img)   
     return result
 
 # 中文标签
@@ -142,6 +148,12 @@ if __name__ == '__main__':
     count = 0
     fps = 4
 
+    if(sys.argv.__len__() > 1):
+
+        if 'false' == str(sys.argv[1]):
+            print(sys.argv[1] , '不显示视频内容')
+            IS_SHOW_TARGET_IMG = False
+
     if not cap.isOpened():
         print("Error opening video file")
     while cap.isOpened():
@@ -150,23 +162,28 @@ if __name__ == '__main__':
         if not ret:
             break
        
+           
         if count % fps == 0:
             start_time = time.time()
             result = funDb(frame)
             
+            if len(result) > 0:
+                print("同一帧:")
+            
             for one in result:
-                print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),'名称',one['name'],'sim',str(round(one['sim'],2)),'box',one['box'])
-
+                print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),'名称',one['name'],'sim',str(round(one['sim'],2)),'box',one['box'],"当前帧耗时:", round(time.time() -start_time,2),'秒')
+            
             # cv.imshow('frame',frame)
             # 导出图片  需要手动创建./input_frame 文件夹
             # cv.imwrite('./input_frame/img_'+ str(count) +'.jpg', frame)
-           
-            print("当前帧耗时:", round(time.time() -start_time,2),'秒' )      
+            if IS_SHOW_RECORDING_TIME:
+                print("当前帧耗时:", round(time.time() -start_time,2),'秒' )      
 
         # cv.imshow('Video', frame)
         count = count + 1
-        if cv.waitKey(25) & 0xFF == ord('q'):
-            break
+        if IS_SHOW_TARGET_IMG:
+            if cv.waitKey(25) & 0xFF == ord('q'):
+                break
 
     cap.release()
     cv.destroyAllWindows()
