@@ -20,7 +20,7 @@ onnxruntime.set_default_logger_severity(3)
 COMPARISON_VALUE = 0.2
 
 # 是否展示推理后图片
-IS_SHOW_TARGET_IMG = True
+IS_SHOW_TARGET_IMG = False
 # 人脸匹配计数器
 RECOGNITION_COUNT = 0
 
@@ -130,7 +130,7 @@ def faceCpByDB(target_img,comparison_value = None):
         # 比较一下临时存储对象中的人脸数据sim值是否为最大
         if not key in map:
             map[key]=item 
-        elif map[key]['sim'] > item['sim']:
+        elif item['sim'] > map[key]['sim']:
             map[key]=item 
         
     # 再次封装成返回数据
