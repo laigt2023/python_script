@@ -11,11 +11,11 @@ from arcface_onnx import ArcFaceONNX
 import os.path as osp
 
 # 人脸库文件目录
-FACE_ENCODES_DB_FILE = './fzx_face_db.json'
-
+# FACE_ENCODES_DB_FILE = './fzx_face_db.json'
+FACE_ENCODES_DB_FILE = './TaiYuan_face_db.json'
 # 人脸图片存放目录 (如：../data/jm/db/)
-FACE_ENCODES_DB_IMAGE_DIR = '../data/jm/fzx_face_db/'
-
+# FACE_ENCODES_DB_IMAGE_DIR = '../data/jm/fzx_face_db/'
+FACE_ENCODES_DB_IMAGE_DIR ="../data/jm/TaiYuan/"
 
 app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
 app.prepare(ctx_id=0, det_size=(640, 640))
@@ -37,9 +37,14 @@ def save_face_db(face_db_dir):
     rec = ArcFaceONNX(model_path)
     rec.prepare(0)
 
+    count_num = 0
+    success_num = 0
+    error_num = 0 
+    error_array=[]
     for root, dirs, files in os.walk(face_db_dir):
         for file in files:
             if file.endswith('.jpg') or file.endswith('.jepg') or file.endswith('.png'):
+                count_num = count_num + 1 
                 # 加载人脸库信息
                 load_face_start_time = time.time()
                 
@@ -49,16 +54,26 @@ def save_face_db(face_db_dir):
                 fac_db_img = get_img(face_db_dir + file)
                 fac_db_bboxes, fac_db_kpss = detector.autodetect(fac_db_img, max_num=1)
                 if fac_db_bboxes.shape[0]==0:
-                    return -1.0, "Face not found in Image-2"
+                    error_num = error_num + 1
+                    error_array.append(filename)
+                    continue
 
                 face_db_kps = fac_db_kpss[0]
                 face_db_feat = rec.get(fac_db_img, face_db_kps)
+              
                 print("加载人脸耗时(",filename," : ",db_persion_name,")", round(time.time() - load_face_start_time,2) ,'秒')
                 item = {
                     "name":db_persion_name,
                     "feat":face_db_feat.tolist()
                 }
                 face_one_encodings_db.append(item)
+                success_num = success_num + 1
+   
+    print(f"总文件：{count_num} 个，成功编码：{success_num} 个,异常编码{error_num} 个")
+    if len(error_array) > 0:
+        print("人脸信息编码异常文件:")
+        for error_filename in error_array:
+            print(error_filename)
 
     # 写入文件
     with open(FACE_ENCODES_DB_FILE, 'w', encoding='utf-8') as xml_file:
