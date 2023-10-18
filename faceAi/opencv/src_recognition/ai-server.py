@@ -95,9 +95,84 @@ async def calculate_add(request):
 
 # base64转图片
 def base64_to_image(encoded_string):
-    decoded_bytes = base64.b64decode(encoded_string)
-    image = Image.open(BytesIO(decoded_bytes))
-    return cv.cvtColor(np.array(image), cv.COLOR_RGB2BGR)
+    # 写入日志文件  w-重新 a-追加
+    with open("./web_post_base64.text", 'w', encoding='utf-8') as txt_file:
+        txt_file.write(encoded_string)
+
+    # decoded_bytes = base64.b64decode(encoded_string)
+    # image = Image.open(BytesIO(decoded_bytes))
+    img_b64decode = base64.b64decode(encoded_string)  # base64解码
+ 
+    image = io.BytesIO(img_b64decode)
+    img = Image.open(image)
+    image = img
+    return cv.cvtColor(np.array(image), cv.COLOR_BGR2RGB)
+
+# 显示处理后的人脸以及异常事件图片
+@app.route("/face_report", methods=["GET", "POST"])
+async def show_face(request):
+    """ 分类 """
+    if request.method == "POST":
+        
+        params = request.form if request.form else request.json
+    elif request.method == "GET":
+        params = request.args
+    else:
+        params = {}
+    # print(params)
+    alarmTime = params['alarmTime']
+    img = base64_to_image(params['alarmPicture'])
+    info_array = params['info']
+    # print(info_array)
+
+
+    # 是否展示图片
+    IS_SHOW_IMG = False
+    # 只展示识别到人脸的数据标记量
+    is_show_face = False
+    # 是否展示全部图片
+    show_all = True
+
+    if show_all:
+        is_show_face = True
+    for num in range(len(info_array)):
+        current_info = info_array[num]
+        print(current_info)
+        if 'faceBox' in current_info:
+            is_show_face = True
+           
+            face = current_info['faceBox']
+            print("face",face)
+            if face:
+                face_position = face.split(",")
+                cv.rectangle(img, (int(face_position[0]), int(face_position[1])), (int(face_position[2]), int(face_position[3])), (0, 255, 0), 2) 
+                # 人脸ID
+                cv.putText(img,current_info['cardId'], (int(face_position[0]), int(face_position[1]) - 5 ),cv.FONT_HERSHEY_COMPLEX,0.5,(0,255,0),1)
+
+        if 'coordinate' in current_info:
+            event = current_info['coordinate']
+            if event:
+                event_position = event.split(",")
+                cv.rectangle(img, (int(event_position[0]), int(event_position[1])), (int(event_position[2]), int(event_position[3])), (0, 0, 255), 2)  
+
+    if IS_SHOW_IMG:
+        if is_show_face:
+
+            cv.imshow('frame_' + str(alarmTime),img)
+
+            if cv.waitKey(0) & 0xFF ==("q"):
+                    cv.destroyAllWindows()
+
+    status_code = 200
+    res_dict = {"code": status_code,
+                "data": params,
+                "message": "success"}
+   
+    result = json(res_dict, status=status_code, ensure_ascii=False)
+    # log_mesg = {"data": res_dict, "status":status_code,"url":request.url}
+    # logMesg(request.url + " : " + json.dumps(result))
+    # logMesg(log_mesg)
+    return result            
 
 # 统一日志输出
 def logMesg(msg):

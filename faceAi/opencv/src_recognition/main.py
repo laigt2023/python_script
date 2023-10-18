@@ -13,6 +13,8 @@ import save_face_db as DB
 import datetime
 import time
 from PIL import Image, ImageDraw, ImageFont
+import base64
+import io
 
 onnxruntime.set_default_logger_severity(3)
 
@@ -32,7 +34,7 @@ model_path = os.path.join(assets_dir, 'w600k_r50.onnx')
 rec = ArcFaceONNX(model_path)
 rec.prepare(0)
 
-# 目标图片缓存
+# 目标图片缓存  TARGET_BBOXES_CACHE  TARGET_KPSS_CACHE 是坐标信息，图片更新时需要置空此2个缓存
 TARGET_BBOXES_CACHE=np.array([])
 TARGET_KPSS_CACHE=np.array([])
 TARGET_FEAT_LIST_CACHE=[]
@@ -47,6 +49,15 @@ def parse_args() -> argparse.Namespace:
     if not args.img1:
         args.img1 = '../img/03.jpg'
     return parser.parse_args()
+
+# 清空缓存，每次新图片进来时都需要清空此缓存
+def clearTargetImgCache():
+    global TARGET_BBOXES_CACHE
+    global TARGET_KPSS_CACHE
+    
+    # 每次新图片进来时，都要清空缓存
+    TARGET_BBOXES_CACHE = np.array([])
+    TARGET_KPSS_CACHE = np.array([])
 
 # 从人脸库中匹配人脸数据
 def funDb(target_img,comparison_value = None):
@@ -118,6 +129,7 @@ def funDb(target_img,comparison_value = None):
 # img 模板目标图片
 # comparison_value 最低匹配值
 def faceCpByDB(target_img,comparison_value = None):
+    clearTargetImgCache()
     array,target_img = funDb(target_img,comparison_value)
     # return array,target_img
     map = {}
@@ -150,8 +162,18 @@ def cvAddChineseText(img, text, position, textColor=(0, 255, 0), textSize=30):
     # 绘制文本
     draw.text(position, text, textColor, font=fontStyle)
     # 转换回OpenCV格式
-    return cv.cvtColor(np.asarray(img), cv.COLOR_RGB2BGR)
+    return cv.cvtColor(np.asarray(img), cv.COLOR_BGR2RGB)
 
+# base64转图片
+def base64_to_image(encoded_string):
+    # decoded_bytes = base64.b64decode(encoded_string)
+    # image = Image.open(BytesIO(decoded_bytes))
+    img_b64decode = base64.b64decode(encoded_string)  # base64解码
+ 
+    image = io.BytesIO(img_b64decode)
+    img = Image.open(image)
+    image = img
+    return cv.cvtColor(np.array(image), cv.COLOR_BGR2RGB)
 
 
 if __name__ == '__main__':
@@ -171,8 +193,17 @@ if __name__ == '__main__':
     #                 fac_db_img_path = face_db_dir + file
     #                 output = func(target_img,fac_db_img_path)
     
+    with open(args.img1, "rb") as image_file:                           
+        encoded_string = base64.b64encode(image_file.read())
+        target_img=base64_to_image(bytes.decode(encoded_string))
+        # 写入日志文件  w-重新 a-追加
+        with open("./base64.text", 'w', encoding='utf-8') as txt_file:
+            txt_file.write(bytes.decode(encoded_string))
 
-    result,target_img = funDb(target_img)
+
+    result,target_img = faceCpByDB(target_img)
+
+    
     if len(result):
         print("人脸比对结果:")
     else:
