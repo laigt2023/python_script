@@ -10,11 +10,45 @@ import main as FACE_RECOGITION
 import time
 import os
 import base64
+import schedule
+import datetime
 
 PORT=8032
 HOST="0.0.0.0"
 app = Sanic("face-ai")
 app.config.HEALTH = True
+
+IS_SHOW_REPORT_IMG = False
+
+# 最大记录日志数(/天）
+LOG_RECORD_DAY = 30
+
+
+# 删除日志文件
+def delete_old_logs():
+    global LOG_RECORD_DAY
+    clear_days = LOG_RECORD_DAY
+    # if day:
+    #    clear_days = day
+    # 获取当前日期
+    today = datetime.date.today()
+    
+    # 计算30天前的日期
+    thirty_days_ago = today - datetime.timedelta(clear_days)
+
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir=current_path + os.path.sep + "face_logs"
+
+    # 删除30天前的日志文件
+    for file_name in os.listdir(dir):
+        file_date = datetime.datetime.strptime(file_name, '%Y-%m-%d_face.log').date()
+        if file_name.endswith(".log"):
+            if file_date < thirty_days_ago:
+                os.remove(os.path.join(dir, file_name))
+                print(f'Deleted {file_name}')
+
+# 每天凌晨1点执行delete_old_logs函数
+schedule.every().day.at("01:00").do(delete_old_logs)
 
 
 @app.route("/face", methods=["GET", "POST"])
@@ -93,6 +127,70 @@ async def calculate_add(request):
     logMesg(log_mesg)
     return result
 
+@app.route("/face/db/reload", methods=["GET", "POST"])
+async def reload_face_db(request):
+    face_db = FACE_RECOGITION.reloadFaceDb()
+
+    status_code = 200
+    res_dict = {"code": status_code,
+                "data": f"刷新重建人脸库，人脸库数据共: {len(face_db)} 个",
+                "message": "success"}
+   
+    result = json(res_dict, status=status_code, ensure_ascii=False)
+    log_mesg = {"data": res_dict, "status":status_code,"url":request.url}
+    # logMesg(request.url + " : " + json.dumps(result))
+    logMesg(log_mesg)
+    return result
+
+@app.route("/face/db/rebuild", methods=["GET", "POST"])
+async def face_db_build(request):
+    rebuild_face_db = FACE_RECOGITION.rebuildFaceDb()
+
+    status_code = 200
+    res_dict = {"code": status_code,
+                "data": f"重建人脸库，人脸库数据共: {len(rebuild_face_db)} 个",
+                "message": "success"}
+   
+    result = json(res_dict, status=status_code, ensure_ascii=False)
+    log_mesg = {"data": res_dict, "status":status_code,"url":request.url}
+    # logMesg(request.url + " : " + json.dumps(result))
+    logMesg(log_mesg)
+    return result
+
+@app.route("/face/log/clear", methods=["GET", "POST"])
+async def face_log_clear(request):
+    global LOG_RECORD_DAY
+    old_day = LOG_RECORD_DAY
+    """ 分类 """
+    if request.method == "POST":
+        
+        params = request.form if request.form else request.json
+    elif request.method == "GET":
+        params = request.args
+    else:
+        params = {}
+
+    if params and "day" in params:
+        print(params)
+        LOG_RECORD_DAY = params['day']
+    delete_old_logs()    
+
+
+
+    status_code = 200
+    res_dict = {"code": status_code,
+                "data": f"手动成功清除{LOG_RECORD_DAY}天前的日志文件",
+                "message": "success"}
+   
+    result = json(res_dict, status=status_code, ensure_ascii=False)
+    log_mesg = {"data": res_dict, "status":status_code,"url":request.url}
+    # logMesg(request.url + " : " + json.dumps(result))
+    logMesg(log_mesg)
+
+    # 恢复默认配置
+    LOG_RECORD_DAY=old_day
+    return result
+
 # base64转图片
 def base64_to_image(encoded_string):
     # 写入日志文件  w-重新 a-追加
@@ -111,6 +209,7 @@ def base64_to_image(encoded_string):
 # 显示处理后的人脸以及异常事件图片
 @app.route("/face_report", methods=["GET", "POST"])
 async def show_face(request):
+    global IS_SHOW_REPORT_IMG
     """ 分类 """
     if request.method == "POST":
         
@@ -127,7 +226,7 @@ async def show_face(request):
 
 
     # 是否展示图片
-    IS_SHOW_IMG = False
+    IS_SHOW_IMG = IS_SHOW_REPORT_IMG
     # 只展示识别到人脸的数据标记量
     is_show_face = False
     # 是否展示全部图片

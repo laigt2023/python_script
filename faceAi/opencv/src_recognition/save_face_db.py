@@ -9,6 +9,7 @@ import numpy as np
 from scrfd import SCRFD
 from arcface_onnx import ArcFaceONNX
 import os.path as osp
+import sys
 
 # 人脸库文件目录
 # FACE_ENCODES_DB_FILE = './fzx_face_db.json'
@@ -24,7 +25,7 @@ def get_img(path):
      return cv.imdecode(np.fromfile(path, dtype=np.uint8), cv.IMREAD_COLOR)
 
 # 解析人脸库文件目录，并生成人脸库JSON文件
-def save_face_db(face_db_dir):
+def save_face_db(face_db_dir,jsonFileName=None):
     global FACE_ENCODES_DB_FILE
     global app
 
@@ -76,10 +77,16 @@ def save_face_db(face_db_dir):
             print(error_filename)
 
     # 写入文件
-    with open(FACE_ENCODES_DB_FILE, 'w', encoding='utf-8') as xml_file:
+    saveFile = FACE_ENCODES_DB_FILE
+
+    if jsonFileName:
+        saveFile=jsonFileName
+        
+    with open(saveFile, 'w', encoding='utf-8') as xml_file:
         json_str = json.dumps(face_one_encodings_db)
         xml_file.write(json_str)         
 
+    return face_one_encodings_db 
 # 加载人脸库
 def load_face_db():
     # 读取文件
@@ -95,6 +102,9 @@ def load_face_db():
             one['feat'] = np.array(one['feat'] )
         return face_encodings_db
 
+# 重建人脸库
+def face_db_rebuild():
+    return save_face_db(FACE_ENCODES_DB_IMAGE_DIR)
 
 if __name__ == "__main__":
     now = datetime.datetime.now()
@@ -103,8 +113,12 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
-    # 写入文件
-    save_face_db(FACE_ENCODES_DB_IMAGE_DIR)
+    if sys.argv.__len__() > 2:
+      jsonFileName = sys.argv[1]
+      save_face_db(FACE_ENCODES_DB_IMAGE_DIR,jsonFileName)
+    else:  
+      # 写入文件
+      save_face_db(FACE_ENCODES_DB_IMAGE_DIR)
 
     # 读取文件
     # load_face_db()

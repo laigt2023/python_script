@@ -6,3 +6,7 @@ compare_xml
 target_xml
 __pycache__
 *.log
+*.jpg
+*.jpeg
+*.png
+*.xml

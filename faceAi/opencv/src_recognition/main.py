@@ -34,6 +34,9 @@ model_path = os.path.join(assets_dir, 'w600k_r50.onnx')
 rec = ArcFaceONNX(model_path)
 rec.prepare(0)
 
+#人脸库数据
+FEAT_DB = np.array([])
+
 # 目标图片缓存  TARGET_BBOXES_CACHE  TARGET_KPSS_CACHE 是坐标信息，图片更新时需要置空此2个缓存
 TARGET_BBOXES_CACHE=np.array([])
 TARGET_KPSS_CACHE=np.array([])
@@ -59,6 +62,27 @@ def clearTargetImgCache():
     TARGET_BBOXES_CACHE = np.array([])
     TARGET_KPSS_CACHE = np.array([])
 
+# 获取人脸库方法
+def getFaceDb():
+    global FEAT_DB
+    
+    if FEAT_DB.any():
+        FEAT_DB = reloadFaceDb()
+
+    return FEAT_DB
+
+# 重新加载人脸库数据
+def reloadFaceDb():
+    global FEAT_DB
+    FEAT_DB = DB.load_face_db()
+    return FEAT_DB
+
+# 触发重新构建人脸
+def rebuildFaceDb():
+    global FEAT_DB
+    FEAT_DB = DB.face_db_rebuild()
+    return FEAT_DB
+
 # 从人脸库中匹配人脸数据
 def funDb(target_img,comparison_value = None):
     global IS_SHOW_TARGET_IMG
@@ -70,7 +94,8 @@ def funDb(target_img,comparison_value = None):
     if not comparison_value:
         comparison_value = COMPARISON_VALUE
 
-    faet_db = DB.load_face_db()
+    # 加载人脸库
+    faet_db = getFaceDb()
 
     # max_num 最大识别人脸数
     if TARGET_BBOXES_CACHE.any() and TARGET_KPSS_CACHE.any():
@@ -82,7 +107,7 @@ def funDb(target_img,comparison_value = None):
         target_kpss = TARGET_KPSS_CACHE
 
     if target_bboxes.shape[0]==0:
-        return []
+        return [],target_img
 
     # 获取到每个人脸的 feat
     feat_start_time = time.time()
@@ -125,10 +150,12 @@ def funDb(target_img,comparison_value = None):
        
     return result,target_img
 
+
 # 从数据库中匹配人脸并筛选出最高匹配度的身份信息
 # img 模板目标图片
 # comparison_value 最低匹配值
 def faceCpByDB(target_img,comparison_value = None):
+    # 清除当前图片帧的编码数据
     clearTargetImgCache()
     array,target_img = funDb(target_img,comparison_value)
     # return array,target_img
@@ -186,19 +213,12 @@ if __name__ == '__main__':
     args = parse_args()
     target_img = get_img(args.img1)
     
-    # face_db_dir = '../data/jm/'
-    # for root, dirs, files in os.walk(face_db_dir):
-    #         for file in files:
-    #             if file.endswith('.jpg') or file.endswith('.jepg') or file.endswith('.png'):
-    #                 fac_db_img_path = face_db_dir + file
-    #                 output = func(target_img,fac_db_img_path)
-    
-    with open(args.img1, "rb") as image_file:                           
-        encoded_string = base64.b64encode(image_file.read())
-        target_img=base64_to_image(bytes.decode(encoded_string))
-        # 写入日志文件  w-重新 a-追加
-        with open("./base64.text", 'w', encoding='utf-8') as txt_file:
-            txt_file.write(bytes.decode(encoded_string))
+    # with open(args.img1, "rb") as image_file:                           
+    #     encoded_string = base64.b64encode(image_file.read())
+    #     target_img=base64_to_image(bytes.decode(encoded_string))
+    #     # 写入日志文件  w-重新 a-追加
+    #     with open("./base64.text", 'w', encoding='utf-8') as txt_file:
+    #         txt_file.write(bytes.decode(encoded_string))
 
 
     result,target_img = faceCpByDB(target_img)
