@@ -19,7 +19,7 @@ import io
 onnxruntime.set_default_logger_severity(3)
 
 # 匹配成功阀值
-COMPARISON_VALUE = 0.2
+COMPARISON_VALUE = 0.35
 
 # 是否展示推理后图片
 IS_SHOW_TARGET_IMG = False
@@ -35,7 +35,7 @@ rec = ArcFaceONNX(model_path)
 rec.prepare(0)
 
 #人脸库数据
-FEAT_DB = np.array([])
+FEAT_DB = []
 
 # 目标图片缓存  TARGET_BBOXES_CACHE  TARGET_KPSS_CACHE 是坐标信息，图片更新时需要置空此2个缓存
 TARGET_BBOXES_CACHE=np.array([])
@@ -66,7 +66,7 @@ def clearTargetImgCache():
 def getFaceDb():
     global FEAT_DB
     
-    if FEAT_DB.any():
+    if len(FEAT_DB) <= 0 :
         FEAT_DB = reloadFaceDb()
 
     return FEAT_DB
@@ -78,9 +78,9 @@ def reloadFaceDb():
     return FEAT_DB
 
 # 触发重新构建人脸
-def rebuildFaceDb():
+def rebuildFaceDb(face_dir):
     global FEAT_DB
-    FEAT_DB = DB.face_db_rebuild()
+    FEAT_DB = DB.face_db_rebuild(face_dir)
     return FEAT_DB
 
 # 从人脸库中匹配人脸数据

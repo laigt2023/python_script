@@ -12,6 +12,7 @@ import os
 import base64
 import schedule
 import datetime
+import threading
 
 PORT=8032
 HOST="0.0.0.0"
@@ -23,6 +24,29 @@ IS_SHOW_REPORT_IMG = False
 # 最大记录日志数(/天）
 LOG_RECORD_DAY = 30
 
+# 定时任务运行 False-不运行 True运行
+task_running=False
+
+def testTask():
+    print("testTask")
+
+# 定义一个线程来运行定时任务
+def run_schedule():
+    global task_running
+    while task_running:
+        schedule.run_pending()
+        time.sleep(1)
+
+@app.route("/test", methods=["GET", "POST"])
+async def test(request):
+    status_code = 200
+    res_dict = {"code": status_code,
+                "message": "success"}
+    
+    time.sleep( 15 * 60 * 1)
+   
+    result = json(res_dict, status=status_code, ensure_ascii=False)
+    return result
 
 # 删除日志文件
 def delete_old_logs():
@@ -39,16 +63,19 @@ def delete_old_logs():
     current_path = os.path.dirname(os.path.realpath(__file__))
     dir=current_path + os.path.sep + "face_logs"
 
+    del_message=""
+
     # 删除30天前的日志文件
     for file_name in os.listdir(dir):
         file_date = datetime.datetime.strptime(file_name, '%Y-%m-%d_face.log').date()
         if file_name.endswith(".log"):
             if file_date < thirty_days_ago:
                 os.remove(os.path.join(dir, file_name))
-                print(f'Deleted {file_name}')
-
-# 每天凌晨1点执行delete_old_logs函数
-schedule.every().day.at("01:00").do(delete_old_logs)
+                del_message+=f'Deleted {file_name}\n'
+    if del_message:
+        logMesg("清理"+ LOG_RECORD_DAY +"前旧日志文件")
+        print(del_message)
+        logMesg(del_message);            
 
 
 @app.route("/face", methods=["GET", "POST"])
@@ -144,7 +171,28 @@ async def reload_face_db(request):
 
 @app.route("/face/db/rebuild", methods=["GET", "POST"])
 async def face_db_build(request):
-    rebuild_face_db = FACE_RECOGITION.rebuildFaceDb()
+    """ 分类 """
+    if request.method == "POST":
+        params = request.form if request.form else request.json
+    elif request.method == "GET":
+        params = {}
+
+        
+        for key in request.args.keys():
+            print(request.args[key])
+            if len(request.args[key]) > 1:
+                params[key] = request.args[key]
+            elif len(request.args[key]) == 1:
+                params[key] = request.args[key][0]
+    else:
+        params = {}
+
+    print(params)
+
+    if params and "face_dir" in params:
+        rebuild_face_db = FACE_RECOGITION.rebuildFaceDb(params["face_dir"])  
+    else:
+        rebuild_face_db = FACE_RECOGITION.rebuildFaceDb(None)
 
     status_code = 200
     res_dict = {"code": status_code,
@@ -292,10 +340,21 @@ def logMesg(msg):
         print(result)
 
 if __name__ == "__main__":
+    # 开启定时任务
+    task_running = True
+  
+    # schedule.every(5).seconds.do(testTask)  
+    # 启动线程每天凌晨1点执行delete_old_logs函数
+    schedule.every().day.at("01:00").do(delete_old_logs)  
+    t = threading.Thread(target=run_schedule)
+    t.start()
+
     app.run(single_process=True,
             access_log=True,
             host=HOST,
             port=PORT,
             workers=1,
             )
+    # 关闭定时任务
+    task_running = False
     

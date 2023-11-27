@@ -42,6 +42,7 @@ def save_face_db(face_db_dir,jsonFileName=None):
     success_num = 0
     error_num = 0 
     error_array=[]
+   
     for root, dirs, files in os.walk(face_db_dir):
         for file in files:
             if file.endswith('.jpg') or file.endswith('.jepg') or file.endswith('.png'):
@@ -102,9 +103,13 @@ def load_face_db():
             one['feat'] = np.array(one['feat'] )
         return face_encodings_db
 
-# 重建人脸库
-def face_db_rebuild():
-    return save_face_db(FACE_ENCODES_DB_IMAGE_DIR)
+# 重建人脸库  face_dir - 人脸库目录 不填为默认路径
+def face_db_rebuild(face_dir):
+    print("face_dir：",face_dir)
+    if face_dir:
+        return save_face_db(face_dir)
+    else:
+        return save_face_db(FACE_ENCODES_DB_IMAGE_DIR)
 
 if __name__ == "__main__":
     now = datetime.datetime.now()
