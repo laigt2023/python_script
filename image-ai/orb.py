@@ -64,21 +64,21 @@ class IMAGE_ORB():
         print(f"相同的特征点数量：{cp_count}")
         # 打印关键点信息 同一张图片进行2次ORB解析，查看输出内容是否一样 end...
 
-    def compute(queryImg1Path,trainImgPath,isShowImg=False,roi={}):
+    def compute(queryImgPath,trainImgPath,isShowImg=False,roi={},subplot=None):
         start_time = time.time()
         # 创建ORB检测器，设置检测器参数nfeatures=3000 - 特征点最大值 fastThreshold：FAST检测阈值，用于确定一个像素是否是关键点。默认值为20。
         # fastThreshold 通过比较中心像素点和周围一圈像素点的灰度值，快速判断是否为角点。
         # nlevels 较大的 nlevels 会导致更多的图像金字塔层数，允许在更广泛的尺度上进行特
         # 较小的 scaleFactor 会导致金字塔层数增加，从而使得在更多尺度上检测到关键点。这对于处理不同尺寸的特征物体或图像比例变化较大的场景非常有用。
         # edgeThreshold：边界阈值，用于决定图像边界处是否要舍弃特征点。调整这个值可能会影响是否检测到边缘附近的关键点。
-        orb = cv.ORB_create(nfeatures=10000,fastThreshold=40,scaleFactor=1.2,nlevels=8,edgeThreshold=31,patchSize=31,WTA_K=2,scoreType=cv.ORB_FAST_SCORE)
+        orb = cv.ORB_create(nfeatures=10000,fastThreshold=20,scaleFactor=1.2,nlevels=8,edgeThreshold=31,patchSize=31,WTA_K=2,scoreType=cv.ORB_FAST_SCORE)
         
         # 设置每2x2像素区域内只取3个特征点
         # orb.setPatchSize(2)
         # orb.setMaxFeatures(3)
 
 
-        queryImg = cv.imread(queryImg1Path, cv.IMREAD_GRAYSCALE)
+        queryImg = cv.imread(queryImgPath, cv.IMREAD_GRAYSCALE)
         trainImg = cv.imread(trainImgPath, cv.IMREAD_GRAYSCALE)
 
         # 设置ROI的范围，这里假设你只想在图像的一部分区域中检测关键点
@@ -155,32 +155,48 @@ class IMAGE_ORB():
             # 推理-全量图-加入不匹配的点
             query_all_marked = cv.drawKeypoints(query_all_marked, non_not_matching_query, None, color=(255, 0, 0), flags=0)
 
-            
-
-            plt.figure(figsize=(6, 12))
-
             # 显示结果
             if roi != None:
-                plt.suptitle(f'ROI:  ({roi["x1"]},{roi["x2"]}) : ({roi["y1"]},{roi["y2"]})', fontsize=16)
+                plt.suptitle(f'ORB算法 ROI:  ({roi["x1"]},{roi["y1"]}) : ({roi["x2"]},{roi["y2"]})  { roi["x2"] - roi["x1"] }  X  { roi["y2"] - roi["y1"] }' , fontsize=16)
 
-            plt.subplot(221), 
-            plt.imshow(train_marked),
-            plt.title(f'原图 {os.path.basename(queryImg1Path)}（关键点:{len(kp_train)}）  \n\n黄色：{len(non_not_matching_train)} 关键点（不与推理图匹配） \n绿色：{len(matching_query_kp)} （与推理图匹配的关键点）')
-            
-            
-            plt.subplot(222), 
-            plt.imshow(query_all_marked), 
-            plt.title(f'推理图 {os.path.basename(trainImgPath)}（关键点:{len(kp_query)}）  \n\n绿色: { len(matching_query)}（与原图匹配） \n红色：{ len(non_not_matching_query)} （与原图不匹配）')
-           
-            plt.subplot(223), 
-            plt.imshow(query_marked), 
-            plt.title(f'推理图 {os.path.basename(trainImgPath)}（关键点:{len(kp_query)}）   \n绿色：{ len(matching_query)} （与原图匹配的关键点） 匹配率：{round(len(matching_query)/len(kp_query) * 100 ,2)}%' )
-            
-            plt.subplot(224), 
-            plt.imshow(query_not_marked), 
-            plt.title(f'推理图 {os.path.basename(trainImgPath)}（关键点:{len(kp_query)}）   \n红色：{ len(non_not_matching_query)} （与原图不匹配的关键点）差异率：{round(len(non_not_matching_query)/len(kp_query) * 100 ,2)}%')
+            if subplot == None:
+                train_marked_title = f'原图 {os.path.basename(trainImgPath)}（关键点:{len(kp_train)}）  \n黄色：{len(non_not_matching_train)} 关键点（不与推理图匹配） \n绿色：{len(matching_query_kp)} （与推理图匹配的关键点）'
+                plt.subplot(121), 
+                plt.imshow(train_marked),
+                plt.title(train_marked_title)
+                
+                
+                query_title = f'推理图 {os.path.basename(queryImgPath)}（关键点:{len(kp_query)}）  \n绿色: { len(matching_query)}（与原图匹配） 匹配率：{round(len(matching_query)/len(kp_query) * 100 ,2)}%   红色：{ len(non_not_matching_query)} （与原图不匹配）差异率：{round(len(non_not_matching_query)/len(kp_query) * 100 ,2)}%'
+                plt.subplot(122), 
+                plt.imshow(query_all_marked), 
+                plt.title(query_title)
+            else:    
+                train_marked_title = f'原图 {os.path.basename(trainImgPath)}（关键点:{len(kp_train)}）  \n黄色：{len(non_not_matching_train)} 关键点（不与推理图匹配） \n绿色：{len(matching_query_kp)} （与推理图匹配的关键点）'
+                plt.subplot(subplot), 
+                plt.imshow(train_marked),
+                plt.title(train_marked_title)
+                
+                
+                query_title = f'推理图 {os.path.basename(queryImgPath)}（关键点:{len(kp_query)}）  \n绿色: { len(matching_query)}（与原图匹配） 匹配率：{round(len(matching_query)/len(kp_query) * 100 ,2)}%   \n红色：{ len(non_not_matching_query)} （与原图不匹配）差异率：{round(len(non_not_matching_query)/len(kp_query) * 100 ,2)}%'
+                plt.subplot(subplot + 1), 
+                plt.imshow(query_all_marked), 
+                plt.title(query_title)
 
-            plt.show()
+                
+                # plt.subplot(223), 
+                # plt.imshow(query_marked), 
+                # plt.title(f'推理图 {os.path.basename(trainImgPath)}（关键点:{len(kp_query)}）   \n绿色：{ len(matching_query)} （与原图匹配的关键点） 匹配率：{round(len(matching_query)/len(kp_query) * 100 ,2)}%' )
+                
+                # plt.subplot(224), 
+                # plt.imshow(query_not_marked), 
+                # plt.title(f'推理图 {os.path.basename(trainImgPath)}（关键点:{len(kp_query)}）   \n红色：{ len(non_not_matching_query)} （与原图不匹配的关键点）差异率：{round(len(non_not_matching_query)/len(kp_query) * 100 ,2)}%')
+            return {
+                "train_marked":train_marked,
+                "train_marked_title":train_marked_title,
+                "query_marked":query_all_marked,
+                "query_marked_title":train_marked_title,
+            }
+            
 
 
 # 获取去重后的数组 is_include 是否包含，True获取包含在【unique_keys_set】的数组， False获取不包含在【unique_keys_set】数组
@@ -203,13 +219,13 @@ def roi_match(keypoints):
 class TestImageSURF(unittest.TestCase):
 
    def test_SURF(self):
-       ORB = IMAGE_ORB()
-    #    img1Path = r'.\img\camera\img-6-x2.jpg'
-    #    img2Path = r'.\img\camera\img-6-x1.jpg'
-    
-    # img[y1:y2,x1:yx2] 取左上角（750px，520px）到右下角（1500px,780px）区域
-       test_1 = {
-        "queryImg1Path" : r'.\img\camera\img-8-1.jpg',
+        ORB = IMAGE_ORB()
+        #    img1Path = r'.\img\camera\img-6-x2.jpg'
+        #    img2Path = r'.\img\camera\img-6-x1.jpg'
+
+        # img[y1:y2,x1:yx2] 取左上角（750px，520px）到右下角（1500px,780px）区域
+        test_1 = {
+        "queryImgPath" : r'.\img\camera\img-8-1.jpg',
         "trainImgPath" : r'.\img\camera\img-8.jpg',
         "roi" : {
             "x1":750,
@@ -217,10 +233,10 @@ class TestImageSURF(unittest.TestCase):
             "x2":1500,
             "y2":780,
         }
-       }
+        }
 
-       test_2 = {
-        "queryImg1Path" : r'.\img\camera\img-10-x1.jpg',
+        test_2 = {
+        "queryImgPath" : r'.\img\camera\img-10-x1.jpg',
         "trainImgPath" : r'.\img\camera\img-10-x2.jpg',
         "roi" : {
             "x1":200,
@@ -228,10 +244,10 @@ class TestImageSURF(unittest.TestCase):
             "x2":1500,
             "y2":800,
         }
-       }
+        }
 
-       test_3 = {
-        "queryImg1Path" : r'.\img\camera\img-m2-x1.jpg',
+        test_3 = {
+        "queryImgPath" : r'.\img\camera\img-m2-x1.jpg',
         "trainImgPath" : r'.\img\camera\img-m2.jpg',
         "roi" : {
             "x1":250,
@@ -239,10 +255,10 @@ class TestImageSURF(unittest.TestCase):
             "x2":1000,
             "y2":1300,
         }
-       }
+        }
 
-       test_4 = {
-        "queryImg1Path" : r'.\img\camera\img-11-1.jpg',
+        test_4 = {
+        "queryImgPath" : r'.\img\camera\img-11-1.jpg',
         "trainImgPath" : r'.\img\camera\img-11.jpg',
         "roi" : {
             "x1":550,
@@ -250,14 +266,98 @@ class TestImageSURF(unittest.TestCase):
             "x2":1500,
             "y2":730,
         }
-       }
+        }
 
-       test = test_4
-      
-       
-       result = IMAGE_ORB.compute(test["queryImg1Path"], test["trainImgPath"],isShowImg = True,roi=test["roi"])
+        test_5 = {
+        "queryImgPath" : r'.\img\camera\img-12-x2.jpg',
+        "trainImgPath" : r'.\img\camera\img-12.jpg',
+        "roi" : {
+            "x1":550,
+            "y1":300,
+            "x2":2000,
+            "y2":1000,
+        }
+        }
 
-       self.assertEqual(result, None)
+        test_6 = {
+        "queryImgPath" : r'.\img\camera\img-14.jpg',
+        "trainImgPath" : r'.\img\camera\img-13.jpg',
+        "roi" : {
+            "x1":500,
+            "y1":2000,
+            "x2":3000,
+            "y2":3000,
+        }
+        }
+
+        test_7 = {
+        "trainImgPath" : r'.\img\camera\img-14.jpg',
+        "queryImgPath" : r'.\img\camera\img-14-x1.jpg',
+        "queryImgPath2" : r'.\img\camera\img-14-x1-1.jpg',
+        "queryImgPath3" : r'.\img\camera\img-14-x2.jpg',
+        "roi" : {
+            "x1":200,
+            "y1":1800,
+            "x2":3000,
+            "y2":3300,
+        }
+        }
+
+        test_8 = {
+            "trainImgPath" : r'.\img\camera\img-15.jpg',
+            "queryImgPath1" : r'.\img\camera\img-15-1.jpg',
+            "queryImgPath2" : r'.\img\camera\img-15-x1.jpg',
+            "queryImgPath3" : r'.\img\camera\img-15-x2.jpg',
+            "queryImgPath4" : r'.\img\camera\img-15-x3.jpg',
+            "roi" : {
+                "x1":10,
+                "y1":1500,
+                "x2":3000,
+                "y2":3700,
+            }
+        }
+        test_9 = {
+            "trainImgPath" : r'.\img\camera\img-17.jpg',
+            "queryImgPath1" : r'.\img\camera\img-17-1.jpg',
+            "queryImgPath2" : r'.\img\camera\img-17-x1.jpg',
+            "queryImgPath3" : r'',
+            "queryImgPath4" : r'',
+            "roi" : {
+                "x1":100,
+                "y1":900,
+                "x2":2000,
+                "y2":1300,
+            }
+        }
+
+        test_10 = {
+            "trainImgPath" : r'.\img\camera\img-18.jpg',
+            "queryImgPath1" : r'.\img\camera\img-18-1.jpg',
+            "queryImgPath2" : r'.\img\camera\img-18-2.jpg',
+            "queryImgPath3" : r'.\img\camera\img-18-x1.jpg',
+            "queryImgPath4" : r'.\img\camera\img-18-x1-1.jpg',
+            "roi" : {
+                "x1":300,
+                "y1":2100,
+                "x2":2500,
+                "y2":3000,
+            }
+        }
+        test = test_10
+
+        plt.figure(figsize=(16, 16))
+        # 调整子图之间的垂直间距
+        plt.subplots_adjust(hspace=0.5)
+        result = IMAGE_ORB.compute(test["queryImgPath1"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=241)
+        result = IMAGE_ORB.compute(test["queryImgPath2"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=243)
+        result = IMAGE_ORB.compute(test["queryImgPath3"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=245)
+        result = IMAGE_ORB.compute(test["queryImgPath4"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=247)
+
+        # result = IMAGE_ORB.compute(test_9["queryImgPath1"], test_9["trainImgPath"],isShowImg = True,roi=test_9["roi"],subplot=221)
+        # result = IMAGE_ORB.compute(test_9["queryImgPath2"], test_9["trainImgPath"],isShowImg = True,roi=test_9["roi"],subplot=223)
+        plt.show()
+        self.assertEqual(result, None)
+        self.assertEqual(result, None)
 
 if __name__ == '__main__':
    unittest.main()        
