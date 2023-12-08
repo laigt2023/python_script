@@ -41,9 +41,11 @@ class IMAGE_ORB():
         
         # 设置相同的随机种子
         np.random.seed(42)
+        # cv.setRNGSeed(42)
         kp_query, des1 = orb.detectAndCompute(img1, None)
-        # 设置相同的随机种子
+        #设置相同的随机种子
         np.random.seed(42)
+        # cv.setRNGSeed(42)
         kp_train, des2 = orb.detectAndCompute(img2, None)
 
         cp_count = 0
@@ -64,19 +66,17 @@ class IMAGE_ORB():
         print(f"相同的特征点数量：{cp_count}")
         # 打印关键点信息 同一张图片进行2次ORB解析，查看输出内容是否一样 end...
 
-    def compute(queryImgPath,trainImgPath,isShowImg=False,roi={},subplot=None):
+    def compute(queryImgPath,trainImgPath,isShowImg=False,roi={},subplot=None, rows =1 ,cols = 1):
         start_time = time.time()
         # 创建ORB检测器，设置检测器参数nfeatures=3000 - 特征点最大值 fastThreshold：FAST检测阈值，用于确定一个像素是否是关键点。默认值为20。
         # fastThreshold 通过比较中心像素点和周围一圈像素点的灰度值，快速判断是否为角点。
         # nlevels 较大的 nlevels 会导致更多的图像金字塔层数，允许在更广泛的尺度上进行特
         # 较小的 scaleFactor 会导致金字塔层数增加，从而使得在更多尺度上检测到关键点。这对于处理不同尺寸的特征物体或图像比例变化较大的场景非常有用。
         # edgeThreshold：边界阈值，用于决定图像边界处是否要舍弃特征点。调整这个值可能会影响是否检测到边缘附近的关键点。
-        orb = cv.ORB_create(nfeatures=10000,fastThreshold=20,scaleFactor=1.2,nlevels=8,edgeThreshold=31,patchSize=31,WTA_K=2,scoreType=cv.ORB_FAST_SCORE)
-        
-        # 设置每2x2像素区域内只取3个特征点
-        # orb.setPatchSize(2)
-        # orb.setMaxFeatures(3)
 
+        orb = cv.ORB_create(nfeatures=200,fastThreshold=20,scaleFactor=2.5,nlevels=3,edgeThreshold=15,patchSize=15,WTA_K=2,scoreType=cv.ORB_FAST_SCORE)
+        # orb = cv.ORB_create(nfeatures=10000,fastThreshold=40,scaleFactor=1.2,nlevels=8,edgeThreshold=31,patchSize=31,WTA_K=2,scoreType=cv.ORB_FAST_SCORE)
+        # orb = cv.ORB_create(nfeatures=10000,WTA_K=2)
 
         queryImg = cv.imread(queryImgPath, cv.IMREAD_GRAYSCALE)
         trainImg = cv.imread(trainImgPath, cv.IMREAD_GRAYSCALE)
@@ -96,12 +96,25 @@ class IMAGE_ORB():
         kp_query, des_query = orb.detectAndCompute(queryImgRoi, None)
         kp_train, des_train = orb.detectAndCompute(trainImgRoi, None)
 
-
-
-        # 使用BFMatcher进行特征匹配
+        # 使用BFMatcher进行特征匹配 ratio 设置为 0.8 用于调整比例测试的阈值
         bf = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
-        # mask：可选参数，用于指定一个掩码，限制哪些匹配将被考虑。如果为 None，则考虑所有匹配。
         matches = bf.match(des_query, des_train)
+
+
+        # 使用knnMatch FMatcher 替换获取匹配
+        # bf = cv.BFMatcher()
+        # matches = bf.knnMatch(des_query, des_train, k=2)
+
+        # # 比例测试的阈值
+        # ratio_threshold = 1.1
+
+        # # 应用比例测试
+        # good_matches = []
+        # for m, n in matches:
+        #     if m.distance < ratio_threshold * n.distance:
+        #         good_matches.append(m)
+
+        # matches = good_matches
 
         # 根据匹配结果排序
         matches = sorted(matches, key=lambda x: x.distance)     
@@ -155,6 +168,12 @@ class IMAGE_ORB():
             # 推理-全量图-加入不匹配的点
             query_all_marked = cv.drawKeypoints(query_all_marked, non_not_matching_query, None, color=(255, 0, 0), flags=0)
 
+
+            # 将原图中的黄点画到 推理图上
+            query_all_marked = cv.drawKeypoints(query_all_marked, non_not_matching_train, None, color=(255, 255, 0), flags=2)
+
+            calculate_keypoint_density(query_all_marked,non_not_matching_query, rows, cols)
+
             # 显示结果
             if roi != None:
                 plt.suptitle(f'ORB算法 ROI:  ({roi["x1"]},{roi["y1"]}) : ({roi["x2"]},{roi["y2"]})  { roi["x2"] - roi["x1"] }  X  { roi["y2"] - roi["y1"] }' , fontsize=16)
@@ -197,7 +216,51 @@ class IMAGE_ORB():
                 "query_marked_title":train_marked_title,
             }
             
+def calculate_keypoint_density(color_img,kp, rows, cols):
+    height, width = color_img.shape[:2]
 
+    # 计算每个区域的宽度和高度
+    region_width =  width // cols
+    region_height = height // rows
+
+    # 初始化密度矩阵
+    diff_matrix = np.zeros((rows, cols))
+    # 遍历每个匹配点
+    for k in kp:
+        # 确定匹配点属于哪个区域
+        col_index = int(k.pt[0] // region_width)
+        row_index = int(k.pt[1] // region_height)
+        # 增加对应区域的密度
+        diff_matrix[row_index, col_index] += 1
+    
+    # 在图像上显示每个区域的关键点匹配数量
+    for i in range(rows):
+        for j in range(cols):
+            x, y = int(j * (color_img.shape[1] / cols)), int(i * (color_img.shape[0] / rows))
+            text = f"{int(diff_matrix[i, j])}"
+            if int(text) != 0:
+                cv.putText(color_img, text, (x, y + 35), cv.FONT_HERSHEY_SIMPLEX, 1.8, (255, 255, 255), 1, cv.LINE_AA)
+
+
+    height, width = color_img.shape[:2]
+
+    # 计算每个区域的宽度和高度
+    region_width =  width // cols
+    region_height = height // rows
+
+    # 定义白色 (BGR格式)
+    white_color = (255, 255, 255)
+
+    # 在每个列画垂直线
+    for i in range(1, cols):
+        x = i * region_width
+        cv.line(color_img, (x, 0), (x, height), white_color, 1)
+
+    # 在每个行画水平线
+    for j in range(1, rows):
+        y = j * region_height
+        cv.line(color_img, (0, y), (width, y), white_color, 1)
+    
 
 # 获取去重后的数组 is_include 是否包含，True获取包含在【unique_keys_set】的数组， False获取不包含在【unique_keys_set】数组
 def get_non_duplicate_objects(array, unique_keys_set, is_include=False):
@@ -336,6 +399,15 @@ class TestImageSURF(unittest.TestCase):
             "queryImgPath2" : r'.\img\camera\img-18-2.jpg',
             "queryImgPath3" : r'.\img\camera\img-18-x1.jpg',
             "queryImgPath4" : r'.\img\camera\img-18-x1-1.jpg',
+            "queryImgPath-copy" : r'.\img\camera\img-18-copy.jpg',
+            "queryImgPath6" : r'.\img\camera\img-18-x2.jpg',
+            "queryImgPath7" : r'.\img\camera\img-18-x2-1.jpg',
+            "roi" : {
+                "x1":300,
+                "y1":2100,
+                "x2":2500,
+                "y2":3000,
+            },
             "roi" : {
                 "x1":300,
                 "y1":2100,
@@ -348,13 +420,27 @@ class TestImageSURF(unittest.TestCase):
         plt.figure(figsize=(16, 16))
         # 调整子图之间的垂直间距
         plt.subplots_adjust(hspace=0.5)
-        result = IMAGE_ORB.compute(test["queryImgPath1"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=241)
-        result = IMAGE_ORB.compute(test["queryImgPath2"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=243)
-        result = IMAGE_ORB.compute(test["queryImgPath3"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=245)
-        result = IMAGE_ORB.compute(test["queryImgPath4"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=247)
+        # result = IMAGE_ORB.compute(test["queryImgPath1"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=241, rows =1 ,cols = 1)
+        # result = IMAGE_ORB.compute(test["queryImgPath2"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=243)
+        # result = IMAGE_ORB.compute(test["queryImgPath3"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=245)
+        # result = IMAGE_ORB.compute(test["queryImgPath4"], test["trainImgPath"],isShowImg = True,roi=test["roi"],subplot=247)
 
-        # result = IMAGE_ORB.compute(test_9["queryImgPath1"], test_9["trainImgPath"],isShowImg = True,roi=test_9["roi"],subplot=221)
-        # result = IMAGE_ORB.compute(test_9["queryImgPath2"], test_9["trainImgPath"],isShowImg = True,roi=test_9["roi"],subplot=223)
+        # result = IMAGE_ORB.compute(test_10["queryImgPath3"], test_10["trainImgPath"],isShowImg = True,roi=test_10["roi"],subplot=221, rows =1 ,cols = 1)
+        # result = IMAGE_ORB.compute(test_10["queryImgPath4"], test_10["trainImgPath"],isShowImg = True,roi=test_10["roi"],subplot=223, rows =1 ,cols = 1)
+
+        result = IMAGE_ORB.compute(test_10["queryImgPath1"], test_10["trainImgPath"],isShowImg = True,roi=test_10["roi"],subplot=221, rows = 10 ,cols = 10)
+        result = IMAGE_ORB.compute(test_10["queryImgPath2"], test_10["trainImgPath"],isShowImg = True,roi=test_10["roi"],subplot=223, rows = 10 ,cols = 20)
+        # result = IMAGE_ORB.compute(test_10["queryImgPath2"], test_10["trainImgPath"],isShowImg = True,roi=test_10["roi"],subplot=325, rows = 10 ,cols = 20)
+
+        # result = IMAGE_ORB.compute(test_10["queryImgPath1"], test_10["trainImgPath"],isShowImg = True,roi=test_10["roi"],subplot=321, rows = 100 ,cols = 200)
+        # result = IMAGE_ORB.compute(test_10["queryImgPath1"], test_10["trainImgPath"],isShowImg = True,roi=test_10["roi"],subplot=323, rows = 100 ,cols = 200)
+        # result = IMAGE_ORB.compute(test_10["queryImgPath3"], test_10["trainImgPath"],isShowImg = True,roi=test_10["roi"],subplot=325, rows = 100,cols = 200)
+        
+        # result = IMAGE_ORB.compute("./img/img-x1.jpg", "./img/img1.jpg",isShowImg = True,roi=None,subplot=221, rows = 10 ,cols = 10)
+        # result = IMAGE_ORB.compute(test_10["queryImgPath3"], test_10["trainImgPath"],isShowImg = True,roi=None,subplot=325, rows = 100,cols = 200)
+
+        # result = IMAGE_ORB.compute("./img/camera/img-m2-x1.jpg", "./img/camera/img-m2.jpg",isShowImg = True,roi=None,subplot=121, rows = 10 ,cols = 10)
+
         plt.show()
         self.assertEqual(result, None)
         self.assertEqual(result, None)
