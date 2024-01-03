@@ -11,12 +11,12 @@ import report_event_image as REPORT_INSTANCE
 # 用于进行AI模型推理/预标注，并输出xml文件
 
 # AI图片推理端接口地址接口地址
-AI_IP='192.168.19.240'
+AI_IP='192.168.19.245'
 # AI图片识别任务ID  就模型ID
 # AI_TASK_ID='e9e35528-71c7-4b62-9b88-8970bee55ab6'
 
-# 新模型任务ID：8f97a571-22e5-41e3-afed-8f525d8338af
-AI_TASK_ID='8f97a571-22e5-41e3-afed-8f525d8338af'
+# 新模型任务ID：8f97a571-22e5-41e3-afed-8f525d8338af    人-反光衣：aeb93c94-4f2d-49d9-83c2-c0b0115644b2
+AI_TASK_ID='aeb93c94-4f2d-49d9-83c2-c0b0115644b2'
 
 # 是否上报事件
 IS_REPORT_EVENT = True
@@ -88,7 +88,13 @@ def ai_predict(image_dir,out_dir,skip,IS_OUTPUT_JPEG=False,task_api_url=False,re
         for root, dirs, files in os.walk(image_dir):
             if files:
                 # 记录文件列表总数
-                file_max_count = files.__len__()
+                file_max_count = 0
+
+                # 获取有效文件数
+                for filename in files:
+                    # 获取文件名称
+                    if filename.lower().endswith('.jpg') or filename.lower().endswith('.jpeg') or filename.lower().endswith('.png'):
+                          file_max_count = file_max_count + 1
 
                 logMsg(f'任务ID：{AI_IP}  目标模型检测推理任务  start...','false')
                 for filename in files:

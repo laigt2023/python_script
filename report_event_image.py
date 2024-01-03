@@ -66,6 +66,8 @@ def report_event_image(image_dir, report_url):
         "siteID" : array[array.__len__() - 3],
         # 日期
         "alarmDate" : array[array.__len__() - 2],
+        # 告警类型：1-智能安全帽、2-固定摄像头
+        "type": "1",
         # 告警视频名称
         "videoName" : fileName + '.mp4',
         # 上报事件类型汇总，helmet-安全帽，vest-反光衣  事件类型：0-安全帽监测、1-反光衣监测、15-安全帽+人脸识别、16-反光衣+人脸识别

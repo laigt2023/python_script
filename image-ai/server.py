@@ -1,5 +1,6 @@
 from sanic.response import json, text
 from sanic import Sanic
+import json as JSON
 import numpy as np
 import orb as ORB
 import time
@@ -8,7 +9,7 @@ import schedule
 import datetime
 import threading
 from pydantic import BaseModel
-
+from typing import Optional, Dict, Any
 PORT = 8033
 HOST = "0.0.0.0"
 app = Sanic("image-ai")
@@ -24,9 +25,10 @@ LOG_FILE_DIR = 'logs'
 TASK_RUNNING=False
 
 class ORBRequestModel(BaseModel):
-    targetImg: str
-    baseImg: str
-    roi: object
+    targetImg: Optional[str] = None
+    baseImg: Optional[str] = None
+    roi: Optional[Dict[str, Any]] = None
+
 
 @app.route("/orb/compute", methods=["GET", "POST"])
 async def orb_compute(request):
@@ -37,10 +39,19 @@ async def orb_compute(request):
         request_data = ORBRequestModel(**request.json)
         roi = None
         # 访问参数
+
+       
+            
         target_img = request_data.targetImg
         base_img = request_data.baseImg
-        if request_data.roi:
-            roi = request_data.roi
+        roi = request_data.roi
+
+        log_data = {
+            "targetImg": target_img,
+            "baseImg": base_img,
+            "roi": roi,
+        } 
+
 
         if not os.path.exists(target_img):
             res_dict = {"code": 500,
@@ -64,7 +75,7 @@ async def orb_compute(request):
 
         result = json(res_dict, status=status_code, ensure_ascii=False)
         log_mesg = {"data": res_dict, "status":status_code,"url":request.url}
-        logMesg(log_mesg)
+        logMesg(JSON.dumps(log_data) + " ORB识别成功(SUCCESS)\n 返回结果：" + JSON.dumps(log_mesg))
         logMesg(f"开始时间：{start_time} 总耗时: {round(time.time() - start_time,4)} 秒")
         return result
     except Exception as e:
@@ -88,7 +99,7 @@ def logMesg(msg):
     current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
     current_path = os.path.dirname(os.path.realpath(__file__))
     dir=current_path + os.path.sep + LOG_FILE_DIR
-    log_file_path = f"{dir + os.path.sep + today}_.log"
+    log_file_path = f"{dir + os.path.sep + today}.log"
     # 创建日志文件夹
     if(os.path.exists(dir) == False):
         os.mkdir(dir)
@@ -125,7 +136,7 @@ def delete_old_logs():
 
     # 删除30天前的日志文件
     for file_name in os.listdir(dir):
-        file_date = datetime.datetime.strptime(file_name, '%Y-%m-%d_.log').date()
+        file_date = datetime.datetime.strptime(file_name, '%Y-%m-%d.log').date()
         if file_name.endswith(".log"):
             if file_date < thirty_days_ago:
                 os.remove(os.path.join(dir, file_name))
