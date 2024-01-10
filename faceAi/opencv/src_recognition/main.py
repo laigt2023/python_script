@@ -80,7 +80,8 @@ def reloadFaceDb():
 # 触发重新构建人脸
 def rebuildFaceDb(face_dir):
     global FEAT_DB
-    FEAT_DB = DB.face_db_rebuild(face_dir)
+    DB.face_db_rebuild(face_dir)
+    FEAT_DB = getFaceDb()
     return FEAT_DB
 
 # 从人脸库中匹配人脸数据
@@ -96,6 +97,7 @@ def funDb(target_img,comparison_value = None):
 
     # 加载人脸库
     faet_db = getFaceDb()
+    print(faet_db)
 
     # max_num 最大识别人脸数
     if TARGET_BBOXES_CACHE.any() and TARGET_KPSS_CACHE.any():

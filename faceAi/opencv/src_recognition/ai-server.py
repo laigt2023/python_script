@@ -73,13 +73,13 @@ def delete_old_logs():
                 os.remove(os.path.join(dir, file_name))
                 del_message+=f'Deleted {file_name}\n'
     if del_message:
-        logMesg("清理"+ LOG_RECORD_DAY +"前旧日志文件")
+        logMesg("清理【"+ str(LOG_RECORD_DAY) +"】前旧日志文件")
         print(del_message)
         logMesg(del_message);            
 
 
 @app.route("/face", methods=["GET", "POST"])
-async def calculate_add(request):
+async def face_cp(request):
     """ 分类 """
     if request.method == "POST":
         
