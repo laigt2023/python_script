@@ -21,6 +21,12 @@ onnxruntime.set_default_logger_severity(3)
 # 匹配成功阀值
 COMPARISON_VALUE = 0.35
 
+# 是否开启 记录相似人脸信息  True-启动 False-关闭
+IS_COMPARISON_LIKE_FACE = True
+# 相似人脸阈值
+LIKE_FACE_MIN_VALUE = 0.1
+
+
 # 是否展示推理后图片
 IS_SHOW_TARGET_IMG = False
 # 人脸匹配计数器
@@ -81,7 +87,7 @@ def reloadFaceDb():
 def rebuildFaceDb(face_dir):
     global FEAT_DB
     DB.face_db_rebuild(face_dir)
-    FEAT_DB = getFaceDb()
+    FEAT_DB = reloadFaceDb()
     return FEAT_DB
 
 # 从人脸库中匹配人脸数据
@@ -97,22 +103,24 @@ def funDb(target_img,comparison_value = None):
 
     # 加载人脸库
     faet_db = getFaceDb()
-    print(faet_db)
 
     # max_num 最大识别人脸数
     if TARGET_BBOXES_CACHE.any() and TARGET_KPSS_CACHE.any():
         target_bboxes = TARGET_BBOXES_CACHE
         target_kpss = TARGET_KPSS_CACHE
     else:
+        # 获取到每个人脸的 feat
+        autodetect_start_time = time.time()
         TARGET_BBOXES_CACHE, TARGET_KPSS_CACHE = detector.autodetect(target_img, max_num=10)
+        print("检测耗时:", round(time.time() - autodetect_start_time,2),'秒', "共检测到 " + str(len(TARGET_BBOXES_CACHE)) +" 张人脸" )   
         target_bboxes = TARGET_BBOXES_CACHE
         target_kpss = TARGET_KPSS_CACHE
 
     if target_bboxes.shape[0]==0:
         return [],target_img
 
-    # 获取到每个人脸的 feat
-    feat_start_time = time.time()
+   # 获取到每个人脸的 feat
+    feat_start_time = time.time() 
     target_feat_list = []
     
     for box_num in range(len(target_bboxes)):
@@ -123,7 +131,8 @@ def funDb(target_img,comparison_value = None):
         target_feat_list.append(f)    
 
     result=[]
-
+    
+    compute_start_time = time.time()
     for num in range(len(target_feat_list)):
         box = target_bboxes[num]
         x1,y1,x2,y2,o=int(box[0]),int(box[1]),int(box[2]),int(box[3]),float(box[4])
@@ -132,6 +141,7 @@ def funDb(target_img,comparison_value = None):
             db_persion_name = db["name"]
             face_db_feat = db["feat"]
             
+           
             # 进行人脸数据对比        
             sim = rec.compute_sim(target_feat_list[num], face_db_feat)
 
@@ -149,7 +159,8 @@ def funDb(target_img,comparison_value = None):
                 if IS_SHOW_TARGET_IMG: 
                     # cv.putText(target_img,db_persion_name + ' '+ str(round(sim,2)), (x1, y1 - 5 ),cv.FONT_HERSHEY_COMPLEX,0.5,(0,255,0),1)
                     target_img=cvAddChineseText(target_img,db_persion_name + ' '+ str(round(sim,4)), (x1, y1 - 22 ),(0,255,0),20)
-       
+
+    print("feat匹配耗时:", round(time.time() - compute_start_time,2),'秒')      
     return result,target_img
 
 
@@ -159,7 +170,15 @@ def funDb(target_img,comparison_value = None):
 def faceCpByDB(target_img,comparison_value = None):
     # 清除当前图片帧的编码数据
     clearTargetImgCache()
-    array,target_img = funDb(target_img,comparison_value)
+    
+    if comparison_value == None:
+        comparison_value = COMPARISON_VALUE
+
+    if IS_COMPARISON_LIKE_FACE == True:
+        array,target_img = funDb(target_img,0.01)
+    else:
+        array,target_img = funDb(target_img,LIKE_FACE_MIN_VALUE)   
+
     # return array,target_img
     map = {}
     result = []
@@ -173,10 +192,21 @@ def faceCpByDB(target_img,comparison_value = None):
             map[key]=item 
         elif item['sim'] > map[key]['sim']:
             map[key]=item 
-        
+    
+    
+ 
     # 再次封装成返回数据
     for item in map:
-        result.append(map[item])
+        if map[item]['sim'] >= comparison_value:
+            result.append(map[item])
+
+    if IS_COMPARISON_LIKE_FACE == True:
+        originalResult = []
+        for item in map:
+            if map[item]['sim'] >= LIKE_FACE_MIN_VALUE:
+                originalResult.append(map[item])
+        logOriginalMesg(originalResult) 
+
     return result,target_img      
 
 # 中文标签
@@ -204,6 +234,23 @@ def base64_to_image(encoded_string):
     image = img
     return cv.cvtColor(np.array(image), cv.COLOR_BGR2RGB)
 
+# 统一日志输出
+def logOriginalMesg(msg):
+    # 获取当前路径
+    today = time.strftime('%Y-%m-%d', time.localtime(time.time()))
+    current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir=current_path + os.path.sep + "face_logs"
+    log_file_path = f"{dir + os.path.sep + today}_face_original.log"
+    # 创建日志文件夹
+    if(os.path.exists(dir) == False):
+        os.mkdir(dir)
+
+    # 写入日志文件  w-重新 a-追加
+    with open(log_file_path, 'a', encoding='utf-8') as txt_file:
+        result = f"{current_time} original 共识别{len(msg)} 张人脸: {msg}"
+        txt_file.write(f"{result}\n")
+        print(result)
 
 if __name__ == '__main__':
     RECOGNITION_COUNT = 0

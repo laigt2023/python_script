@@ -75,22 +75,47 @@ def delete_old_logs():
     if del_message:
         logMesg("清理【"+ str(LOG_RECORD_DAY) +"】前旧日志文件")
         print(del_message)
-        logMesg(del_message);            
+        logMesg(del_message);       
+
+
+    del__original_message=""
+
+    # 删除30天前的original识别日志文件
+    for file_name in os.listdir(dir):
+        file_date = datetime.datetime.strptime(file_name, '%Y-%m-%d_face_original.log').date()
+        if file_name.endswith(".log"):
+            if file_date < thirty_days_ago:
+                os.remove(os.path.join(dir, file_name))
+                del__original_message+=f'Deleted {file_name}\n'
+    if del__original_message:
+        logMesg("清理【"+ str(LOG_RECORD_DAY) +"】前旧日志文件")
+        print(del__original_message)
+        logMesg(del__original_message);   
 
 
 @app.route("/face", methods=["GET", "POST"])
 async def face_cp(request):
     """ 分类 """
-    if request.method == "POST":
-        
+    if request.files:
+        params = {}
+
+        try:
+            p = request.form if request.form else request.json
+
+            if "sim" in p:
+              params["sim"] = p["sim"][0]
+            # 处理其他特定类型的异常
+        except:
+            print("无参数")
+
+    elif request.method == "POST":
         params = request.form if request.form else request.json
     elif request.method == "GET":
         params = request.args
     else:
         params = {}
-    
     # print(params)
-    if len(params['base64_code']) == 0:
+    if 'base64_code' not in params or len(params['base64_code']) == 0:
         if 'file' not in request.files :
             result = json({'message': 'No image file'}, status=400)
             log_mesg = {'message':'No image file', "status":400,"url":request.url}
