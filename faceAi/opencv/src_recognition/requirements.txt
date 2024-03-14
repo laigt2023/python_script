@@ -1,0 +1,9 @@
+insightface === 0.7.3
+onnxruntime === 1.16.0
+scikit-learn === 1.3.2
+numpy==1.24.4
+opencv-python==4.9.0.80
+opencv-python-headless==4.9.0.80
+protobuf === 4.21.12
+sanic === 23.6.0
+schedule === 1.2.1
