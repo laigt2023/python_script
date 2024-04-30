@@ -24,6 +24,9 @@ IS_SHOW_REPORT_IMG = False
 # 最大记录日志数(/天）
 LOG_RECORD_DAY = 30
 
+# 匹配成功阀值
+COMPARISON_VALUE = 0.30
+
 # 定时任务运行 False-不运行 True运行
 task_running=False
 
@@ -95,6 +98,7 @@ def delete_old_logs():
 
 @app.route("/face", methods=["GET", "POST"])
 async def face_cp(request):
+    compute_start_time = time.time()
     """ 分类 """
     if request.files:
         params = {}
@@ -161,7 +165,7 @@ async def face_cp(request):
         
     else:
         # result,target_img = FACE_RECOGITION.funDb(img)
-        result,target_img = FACE_RECOGITION.faceCpByDB(img)
+        result,target_img = FACE_RECOGITION.faceCpByDB(img,COMPARISON_VALUE)
     
     respone_data = {
         "filename":filename,
@@ -176,7 +180,8 @@ async def face_cp(request):
     result = json(res_dict, status=status_code, ensure_ascii=False)
     log_mesg = {"data": res_dict, "status":status_code,"url":request.url}
     # logMesg(request.url + " : " + json.dumps(result))
-    logMesg(log_mesg)
+    logMesg(f"耗时:{round(time.time() - compute_start_time,4)} 秒  {log_mesg}")
+    # logMesg(("耗时:" + str(round(time.time() - compute_start_time,2)) +'秒  ')  + log_mesg)
     return result
 
 @app.route("/face/db/reload", methods=["GET", "POST"])

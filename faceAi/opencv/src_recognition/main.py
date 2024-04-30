@@ -19,7 +19,7 @@ import io
 onnxruntime.set_default_logger_severity(3)
 
 # 匹配成功阀值
-COMPARISON_VALUE = 0.35
+COMPARISON_VALUE = 0.30
 
 # 是否开启 记录相似人脸信息  True-启动 False-关闭
 IS_COMPARISON_LIKE_FACE = True
