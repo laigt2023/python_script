@@ -17,6 +17,7 @@ FACE_ENCODES_DB_FILE = './LongKou_face_db.json'
 # 人脸图片存放目录 (如：../data/jm/db/)
 # FACE_ENCODES_DB_IMAGE_DIR = '../data/jm/fzx_face_db/'
 FACE_ENCODES_DB_IMAGE_DIR =r"D:\工作交接\穗建人脸考勤\龙口人脸库\d1e394d934ff4db096c3cd681637e432/"
+# FACE_ENCODES_DB_IMAGE_DIR =r"D:\工作交接\穗建人脸考勤\龙口人脸库\test/"
 
 if not os.path.exists(FACE_ENCODES_DB_FILE):
     with open(FACE_ENCODES_DB_FILE, 'w'):

@@ -95,6 +95,48 @@ def delete_old_logs():
         print(del__original_message)
         logMesg(del__original_message);   
 
+@app.route("/singleFaceCp", methods=["GET", "POST"])
+async def single_face_cp(request):
+    compute_start_time = time.time()
+    """ 分类 """
+  
+    if request.method == "POST":
+        params = request.form if request.form else request.json
+    elif request.method == "GET":
+        params = request.args
+    else:
+        params = {}
+
+     
+    target_img_path = params["targetImgPath"]
+
+    # 读取图像文件
+    target_img = cv.imread(target_img_path)
+
+    # 检查图像是否成功加载
+    if target_img is None:
+        res_dict = {"code": 500,
+                "message": "target_img 图片读取识别，请检测文件是否不存在或格式错误"}
+        log_mesg = {"data": res_dict, "status":status_code,"url":request.url}
+        return result 
+
+
+    comparison_imgs = params["compareImgPaths"]
+    # 单张人脸对比多张人脸底库
+    respone_data = FACE_RECOGITION.single_face_compare_imgs(target_img_path, comparison_imgs)
+   
+    status_code = 200
+    res_dict = {"code": status_code,
+                "data": respone_data,
+                "message": "success"}
+    print(res_dict)
+    result = json(res_dict, status=status_code, ensure_ascii=False)
+    log_mesg = {"data": res_dict, "status":status_code,"url":request.url}
+    # logMesg(request.url + " : " + json.dumps(result))
+    logMesg(f"耗时:{round(time.time() - compute_start_time,4)} 秒  {log_mesg}")
+    # logMesg(("耗时:" + str(round(time.time() - compute_start_time,2)) +'秒  ')  + log_mesg)
+    return result    
+
 
 @app.route("/face", methods=["GET", "POST"])
 async def face_cp(request):

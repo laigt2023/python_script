@@ -40,6 +40,9 @@ model_path = os.path.join(assets_dir, 'w600k_r50.onnx')
 rec = ArcFaceONNX(model_path)
 rec.prepare(0)
 
+print("执行提供程序：",onnxruntime.get_available_providers())
+print(onnxruntime.get_device())
+
 #人脸库数据
 FEAT_DB = []
 
@@ -90,6 +93,76 @@ def rebuildFaceDb(face_dir):
     FEAT_DB = reloadFaceDb()
     return FEAT_DB
 
+# 单张图片对比多张图片
+def single_face_compare_imgs(target_img_path,comparison_imgs):
+    autodetect_start_time = time.time()
+    target_feat_list = []
+    result=[]
+
+    # 读取目标图片
+    target_img = cv.imread(target_img_path)
+
+    if not comparison_imgs:
+        comparison_imgs = []
+
+    if len(comparison_imgs) <= 0:
+        return []
+
+    # 获取目标图片的特征点
+    target_bboxes, target_kpss = detector.autodetect(target_img, max_num=10)
+    print("目标图片特征点获取耗时:", round(time.time() - autodetect_start_time,2),'秒', "共检检测到 " + str(len(target_bboxes)) +" 张人脸" )  
+  
+
+    if target_bboxes.shape[0]==0:
+        return 0
+    
+    # 获取到每个人脸的 feat
+    feat_start_time = time.time()
+    for box_num in range(len(target_bboxes)):
+        # 加载对应的人脸信息
+        f = rec.get(target_img, target_kpss[box_num])
+        print("feat编码耗时:", round(time.time() - feat_start_time,2),'秒', 'box数量',len(target_bboxes) )   
+        TARGET_FEAT_LIST_CACHE.append(f)
+        target_feat_list.append(f)    
+
+    # 循环目标图片中出现的，多张人脸
+    for num in range(len(target_feat_list)):
+        face_id = num + 1
+        box = target_bboxes[num]
+        x1,y1,x2,y2,o=int(box[0]),int(box[1]),int(box[2]),int(box[3]),float(box[4])
+
+        sims = []
+        # comparison_img 对比图片的路径
+        comparison_autodetect_start_time =  time.time()
+        for img_path in comparison_imgs:
+
+            # 获取对比图片的特征点
+            comparison_img_path = img_path
+
+            comparison_img = cv.imread(img_path)
+
+            if comparison_img is None:
+                print("对比图片加载失败:", img_path)
+                continue
+
+            
+            comparison_bboxes, comparison_kpss = detector.autodetect(comparison_img, max_num=10)
+           
+            for comparison_box_num in range(len(comparison_bboxes)):
+                # 获取对比图片的特征点
+                comparison_feats = rec.get(comparison_img, comparison_kpss[comparison_box_num])
+                # 获取到当前对比人脸图片的 feat
+                current_face_comparison_feat = comparison_feats
+            
+                # 进行人脸数据对比        
+                sim = rec.compute_sim(target_feat_list[num], current_face_comparison_feat)
+                
+                sims.append({ "img":comparison_img_path,"sim":str(sim) })
+    
+        print("第"+ str(face_id)+"张人脸对比全部底库图片耗时:", round(time.time() - comparison_autodetect_start_time,2),'秒')  
+        result.append({ "face_id":face_id,"target_img":target_img_path,"target_box":[x1,y1,x2,y2,o],"sims":sims })
+        
+    return result
 # 从人脸库中匹配人脸数据
 def funDb(target_img,comparison_value = None):
     global IS_SHOW_TARGET_IMG
