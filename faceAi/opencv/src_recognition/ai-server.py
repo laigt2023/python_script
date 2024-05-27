@@ -115,6 +115,7 @@ async def single_face_cp(request):
 
     # 检查图像是否成功加载
     if target_img is None:
+        status_code = 400
         res_dict = {"code": 500,
                 "message": "target_img 图片读取识别，请检测文件是否不存在或格式错误"}
         log_mesg = {"data": res_dict, "status":status_code,"url":request.url}
