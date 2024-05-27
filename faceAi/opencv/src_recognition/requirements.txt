@@ -1,5 +1,5 @@
 insightface === 0.7.3
-onnxruntime === 1.16.0
+onnxruntime-gpu === 1.16.0
 scikit-learn === 1.3.2
 numpy==1.24.4
 opencv-python==4.9.0.80
